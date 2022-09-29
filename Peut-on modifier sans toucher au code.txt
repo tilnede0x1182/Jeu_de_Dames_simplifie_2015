@@ -1,0 +1,14 @@
+- On peut changer le taille du plateau :
+	Il suffit d'uiliser le constucteur de la classe plateau.
+	Plateau(int longueur, int hauteur);
+
+	Il faudra aussi redéfinir les classes suivantes : 
+		Jeu
+
+- On peut changer la couleur des fantômes :
+	Il suffit d'utiliser la fonction
+	CaseNonGraphique.setCouleur_du_fantome(Color);
+
+	Il faudra aussi redéfinir les classes suivantes : 
+		Ghost
+

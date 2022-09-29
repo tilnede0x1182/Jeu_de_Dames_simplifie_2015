@@ -1,0 +1,10 @@
+CHG
+# Player 1
+B B B G
+G G B G
+
+# Player 2
+G B B G
+B G B G
+
+# Move

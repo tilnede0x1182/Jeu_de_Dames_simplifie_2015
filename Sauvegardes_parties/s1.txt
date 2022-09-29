@@ -1,0 +1,14 @@
+HCG
+# Player 1
+B G B G
+B B G G
+
+# Player 2
+G G G B
+B B B G
+
+# Move
+1 - b6 , a6 - c2 , c3
+2 - e6 , f6 - d2 , d3
+3 - a6 , b6 - d3 , e3
+4 - b6 , a6

@@ -1,0 +1,18 @@
+Pour la liste des fonctionnalité implémentées : 
+
+- Jeu non graphique : oui
+- Jeu graphique : oui
+- Mode triche : oui
+- Menu dans le terminal : oui
+- Menu dans la fenêtre : il manque le choix du mode jeu 
+	(on joue forcément en humain contre humain 
+	(mais c'est le seul mode demandé dans le sujet), 
+	avec choix des fantômes automatiques).
+- Relecture à partir d'un fichier : oui
+
+Fonctionnalités supplémentaires : 
+- Plusieurs modes de jeu (dont deux supplémentaires) :
+	# ordinateur contre humain
+	# odinateur contre odinateur.
+- Placement des fanômes automatique (grâce à une option dans la 
+	commande du terminal (cf READ-ME)).

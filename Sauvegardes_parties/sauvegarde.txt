@@ -1,0 +1,15 @@
+HCT
+# Player 1
+G G B B
+G G B B
+
+# Player 2
+G G B B
+B G G B
+
+# Move
+1 - b6 , a6 - b1 , a1
+2 - c6 , b6 - a1 , b1
+3 - d6 , c6 - e2 , f2
+4 - c6 , d6 - d1 , d2
+5 - e6 , f6 - b2 , a2
