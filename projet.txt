@@ -1,0 +1,3981 @@
+# ./src/BoardGenerationException.java
+
+class BoardGenerationException extends RuntimeException {
+	public BoardGenerationException (String s) {
+		super(s);
+	}
+}
+
+# ./src/Case.java
+
+interface Case {
+
+}
+
+# ./src/CaseGraphique.java
+
+import java.awt.Color;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+
+import javax.swing.JPanel;
+
+
+public class CaseGraphique extends JPanel implements Case {
+	private Plateau plateau;
+	private int [] adresse_CaseGraphique;
+	private boolean selectionne;
+	private boolean CaseGraphique_selection_initiale;
+	private boolean fantome_present = true;
+	private boolean case_sortie = false;
+	private final Color couleur_de_fond_de_base = new Color(255, 206, 158);
+	private Color couleur_de_fond = couleur_de_fond_de_base;
+	private Color couleur_de_fond_tmp = couleur_de_fond_de_base;
+	private Color couleur_des_sorties = new Color(209, 139, 71);
+	private Color couleur_du_fantome = new Color(randInt(0, 255), randInt(0, 
+		255), randInt(0, 255));
+	private Color couleur_du_fantome_tmp = couleur_du_fantome;
+	private Color couleur_du_fantome_indetermine = Color.gray;
+	/**
+		fantome_visible : <br>
+			true : activé <br>
+			false : désactivé
+	**/
+	private boolean fantome_visible = true;
+
+	public CaseGraphique (Plateau plateau, int i, int j) {
+		super();
+		this.plateau = plateau;
+		adresse_CaseGraphique = new int[2];
+		adresse_CaseGraphique[0] = i;
+		adresse_CaseGraphique[1] = j;
+	}
+
+// #################### Placement du fantôme s'il existe ###################### //
+
+	/**
+	 * Calcule les hauteurs de chaque rond 
+	 * et du rectangle de la couleur du fond
+	 * en fonction de la hauteur du rond 1.
+	 */
+	public int [] calcul_hr2_hr3_hr4_aux (int hr1, int tr1, int tr2, 
+			int tr3) {
+		int [] res = new int[3];
+		int hr2=0, hr3=0, hr4=0;
+		hr2 = (int)(hr1+tr1-(int)((41/100.0)*tr1));
+		hr3 = (int)(hr2+tr2-(int)((44/100.0)*tr2));
+		hr4 = (int)(hr3+tr3-(int)((30/100.0)*tr3));
+		res[0] = hr2; res[1] = hr3; res[2] = hr4;
+		return res;	
+	}
+	
+	/**
+	 * Utilise la fonction calcul_hr2_hr3_hr4_aux pour placer 
+	 * le fantôme bien au milieu au niveau de la hauteur.
+	 */
+	public int [] calcul_hr2_hr3_hr4 (int tr1, int tr2, int tr3, 
+			int getHeight) {
+		int[] t1  = calcul_hr2_hr3_hr4_aux(0, tr1, tr2, tr3);
+		int hauteur_rond1 = getHeight/2-t1[2]/2;
+		t1 = calcul_hr2_hr3_hr4_aux(hauteur_rond1, tr1, tr2, tr3);
+		int [] res = new int[4];
+		res[0] = hauteur_rond1;	res[1] = t1[0]; res[2] = t1[1]; res[3] = 
+			t1[2];
+		return res;
+	}
+	
+	public int [] calcule_place_fantome (int getHeight, int getWidth) {
+		int taille_rond1=(int)(0.24*(Math.min(getWidth, getHeight)));
+		int taille_rond2=(int)(0.4*(Math.min(getWidth, getHeight)));
+		int taille_rond3=(int)(0.6*(Math.min(getWidth, getHeight)));
+		int [] t1 = calcul_hr2_hr3_hr4(taille_rond1, taille_rond2, 
+			taille_rond3, getHeight);
+		int [] res = new int [7];
+		res[0] = taille_rond1;
+		res[1] = taille_rond2;
+		res[2] = taille_rond3;
+		res[3] = t1[0];	res[4] = t1[1]; res[5] = t1[2]; res[6] = t1[3];
+		return res;
+	}
+	
+	public void place_fantome (Graphics g, int getHeight, int getWidth) {
+		int [] hr1 = calcule_place_fantome(getHeight, getWidth);
+		// Augmente l'épaisseur du trait en fonction de la taille ***# //
+		// de la fenetre #*******************************************# //
+		int epaisseur_de_trait = 1;
+		if (Math.min(getHeight, getWidth)>50) epaisseur_de_trait = 2;
+		if (Math.min(getHeight, getWidth)>100) epaisseur_de_trait = 3;
+		// #*********************************************************# //
+		int taille_rond1 = hr1[0];
+		int taille_rond2 = hr1[1];
+		int taille_rond3 = hr1[2];			
+		int hauteur_r1 = hr1[3];
+		int hauteur_r2 = hr1[4];
+		int hauteur_r3 = hr1[5];
+		int hauteur_r4 = hr1[6];
+		int rayon_r3 = taille_rond3/2;
+		int distance_v = hauteur_r4-(hauteur_r3+rayon_r3);
+		int mesure_trait_cache = 
+				(int)(Math.sqrt(Math.pow(rayon_r3, 2)
+				 - (Math.pow(distance_v, 2))))*2;
+		int distance_supplementaire_trait = rayon_r3-mesure_trait_cache/2;
+
+		g.setColor(Color.black);
+		g.fillOval(getWidth/2-taille_rond1/2, hauteur_r1, taille_rond1,	
+			taille_rond1);
+		g.fillOval(getWidth/2-taille_rond2/2, hauteur_r2, taille_rond2, 
+			taille_rond2);
+		g.fillOval(getWidth/2-taille_rond3/2, hauteur_r3, taille_rond3, 
+			taille_rond3);
+		g.setColor(couleur_du_fantome);
+		g.fillOval(getWidth/2-taille_rond1/2+epaisseur_de_trait,
+				hauteur_r1+epaisseur_de_trait,
+				taille_rond1-epaisseur_de_trait*2,
+				taille_rond1-epaisseur_de_trait*2);
+		g.fillOval(getWidth/2-taille_rond2/2+epaisseur_de_trait, 
+				hauteur_r2+epaisseur_de_trait, 
+				taille_rond2-epaisseur_de_trait*2, 
+				taille_rond2-epaisseur_de_trait*2);
+		g.fillOval(getWidth/2-taille_rond3/2+epaisseur_de_trait, 
+				hauteur_r3+epaisseur_de_trait, 
+				taille_rond3-epaisseur_de_trait*2, 
+				taille_rond3-epaisseur_de_trait*2);
+		g.setColor(couleur_de_fond);
+		g.fillRect(0, hauteur_r4, getWidth, getHeight);
+		g.setColor(Color.black);
+		g.fillRect(getWidth/2-taille_rond3/2
+				+distance_supplementaire_trait,
+				hauteur_r4, mesure_trait_cache+2, 
+				epaisseur_de_trait);
+	}
+
+// ######################### Sélection-désélection ############################ //
+	
+	public void select_deselect () {
+		if (!selectionne) select();
+		else deselect();		
+	}
+	
+	public void inverse_couleur_fond () {
+		int rouge = 255-couleur_de_fond.getRed();
+		int vert = 255-couleur_de_fond.getGreen();
+		int bleu = 255-couleur_de_fond.getBlue();
+		couleur_de_fond = new Color(rouge, vert, bleu);
+		repaint();
+	}
+	
+	public void select () {
+		if (selectionne) return;
+		selectionne = true;
+		inverse_couleur_fond();
+	}
+	public void deselect () {
+		if (!selectionne) return;
+		selectionne = false;
+		couleur_de_fond = couleur_de_fond_tmp;
+		repaint();
+	}
+
+// #################### Mse à jour de la case ################################# //
+
+	public void mise_a_jour (CaseNonGraphique case1) {
+		this.fantome_present = case1.fantome_present();
+		//aff("mise a jour de la case : "+case1);
+		if (fantome_present) {
+			this.couleur_du_fantome_tmp = case1.getCouleur_du_fantome();
+			mise_a_jour_couleur_du_fantome();
+		}
+		setCase_sortie(case1.getCase_sortie());
+		repaint();
+	}
+
+	public void mise_a_jour_du_fond () {
+		couleur_de_fond = couleur_de_fond_tmp;
+		repaint();
+	}
+
+	public void mise_a_jour_couleur_du_fantome () {
+		if (fantome_visible)
+			couleur_du_fantome = couleur_du_fantome_tmp;
+		else couleur_du_fantome = couleur_du_fantome_indetermine;
+		repaint();
+	}
+
+// ########################## Dessin du panel ################################# //
+	
+	public void paintComponent (Graphics g) {
+		int getWidth = this.getWidth();
+		int getHeight = this.getHeight();
+				
+		Graphics2D g2 = (Graphics2D) g;
+		
+		/* Dessin du fond */
+		g.setColor(couleur_de_fond);	
+		g.fillRect(0,0,getWidth,getHeight);	
+	
+		/* Dessin du fantome si présent */
+		if (fantome_present) {
+			place_fantome(g, getHeight, getWidth);
+		}
+		
+		/* Dessin des bords */
+		g.setColor(Color.black);
+		int epaisseur_des_traits_droite_et_bas = 0;
+		if (CaseGraphique_selection_initiale) 
+			epaisseur_des_traits_droite_et_bas = 1;
+		g.drawRect(0, 0, getWidth-epaisseur_des_traits_droite_et_bas,
+				getHeight-epaisseur_des_traits_droite_et_bas);
+	}
+	
+// ########################## Getteurs et setteurs ############################ //
+
+	public Color getCouleur_de_fond() {
+		return couleur_de_fond;
+	}
+	public Color getCouleur_des_sorties() {
+		return couleur_des_sorties;
+	}
+	public Color getCouleur_du_fantome() {
+		return couleur_du_fantome;
+	}
+	public void setCouleur_de_fond(Color couleur_de_fond) {
+		this.couleur_de_fond = couleur_de_fond;
+		repaint();
+	}
+	public void setCouleur_des_sorties(Color couleur_des_sorties) {
+		this.couleur_des_sorties = couleur_des_sorties;
+		repaint();
+	}
+	public void setCouleur_du_fantome(Color couleur_du_fantome) {
+		this.couleur_du_fantome = couleur_du_fantome;
+		couleur_du_fantome_tmp = couleur_du_fantome;
+		repaint();
+	}
+	public int [] getAdresse_CaseGraphique () {
+		return adresse_CaseGraphique;
+	}
+	public boolean isCaseGraphique_selection_initiale () {
+		return CaseGraphique_selection_initiale;
+	}
+	public void setCaseGraphique_selection_initiale(
+			boolean CaseGraphique_selection_initiale) {
+		this.CaseGraphique_selection_initiale = 
+			CaseGraphique_selection_initiale;
+	}
+	public boolean isSelectionne() {
+		return selectionne;
+	}
+	public String getPosition () {
+		return (plateau.ConvertCoordonnees_String(adresse_CaseGraphique[0],
+				adresse_CaseGraphique[1]));
+	}
+	public void setCase_sortie (boolean case_sortie) {
+		if (this.case_sortie==case_sortie) return;
+		this.case_sortie = case_sortie;
+		if (case_sortie) {
+			couleur_de_fond_tmp = couleur_des_sorties;
+		}
+		else {
+			couleur_de_fond_tmp = couleur_de_fond_de_base;
+		}
+		mise_a_jour_du_fond();
+	}
+	public boolean getFantome_visible () {
+		return fantome_visible;
+	}
+	public void setFantome_visible (boolean fantome_visible_tmp) {
+		if (this.fantome_visible==fantome_visible_tmp) return;
+		if (fantome_visible_tmp)
+			couleur_du_fantome = couleur_du_fantome_tmp;
+		else 
+			couleur_du_fantome = couleur_du_fantome_indetermine;
+		this.fantome_visible = fantome_visible_tmp;
+
+		repaint();
+	}
+	public Color getCouleur_du_fantome_indetermine () {
+		return couleur_du_fantome_indetermine;
+	}
+	public void setCouleur_du_fantome_indetermine (Color tmp) {
+		couleur_du_fantome_indetermine = tmp;
+	}
+
+// ####################### Affichages de débuggage ############################ //
+	
+	public void affiche_adresse () {
+		afftab(adresse_CaseGraphique);
+		aff("CaseGraphique sélectionnée : "+selectionne);
+	}
+	
+// ################### Fonctions utilitaires ################################## //
+
+	public void aff (String s1) {
+		System.out.println(s1);
+	}
+
+	public void affnn (String s1) {
+		System.out.print(s1);
+	}
+
+	public void afftab (int [] tab, String nom) {
+		for (int i=0; i<tab.length; i++) {
+			aff(nom+"["+i+"] = "+tab[i]);
+		}
+	}
+
+	public void afftab (int [] tab) {
+		for (int i=0; i<tab.length; i++) {
+			aff("tab["+i+"] = "+tab[i]);
+		}
+	}
+
+	public static int randInt (int min, int max) {
+		int res = (int)(Math.random()*max)+min;
+		if (res>max) res = max;
+		if (res<min) res = min;
+
+		return res;
+	}
+}
+
+
+# ./src/CaseNonGraphique.java
+
+import java.awt.Color;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.util.List;
+import java.util.ArrayList;
+import javax.swing.JPanel;
+
+class CaseNonGraphique implements Case {
+	private final Color couleur_de_fond_de_base = new Color(255, 206, 158);
+	private final Color couleur_de_fond_Case_sortie = 
+		new Color(209, 139, 71);
+
+	boolean Case_sortie = false;
+	/**
+		true : joueur1
+		false : joueur2
+	**/
+	private boolean joueur1_2 = false;
+	private Color couleur_de_fond =  couleur_de_fond_de_base;
+	/**
+		fantome_visible : <br>
+			true : activé <br>
+			false : désactivé
+	**/
+	private boolean fantome_visible = true;
+	private Ghost ghost;
+
+	public CaseNonGraphique () {
+		super();
+	}
+
+	public CaseNonGraphique (Ghost ghost) {
+		this();
+		this.ghost = ghost;
+	}
+
+// ######################## Gestion du fantôme ############################## //
+
+	public boolean ajoute_fantome (Ghost ghost_tmp) {
+		if (ghost!=null) return false;
+		else {
+			ghost = ghost_tmp;
+			return true;
+		}
+	}
+
+	public boolean retire_fantome () {
+		if (ghost==null) return false;
+		else {
+			ghost = null;
+			return true;
+		}
+	}
+
+// ####################### Confrontation de fantômes ######################## //
+
+	/**
+		Capture le fantôme par g2.
+	**/
+	public boolean capture_fantome (Ghost g2) {
+		if (!fantome_present()) return false;
+		else {
+			String nature_du_fantome = "bon";
+			if (!ghost.getBon_mauvais()) nature_du_fantome = "mauvais";
+			Joueur joueur_attaquant = g2.getJoueur();
+			Joueur joueur_attaque = ghost.getJoueur();
+			aff("Le fantome caputre est "+nature_du_fantome+".");	
+			joueur_attaquant.capture_fatome(ghost.getBon_mauvais());
+			joueur_attaque.se_fait_capturer_un_fatome(
+				ghost.getBon_mauvais());
+			retire_fantome();
+			ajoute_fantome(g2);
+			return true;
+		}
+	}
+
+// ######################## Deplacement de fantômes ######################## //
+
+	public void place_fantome (Ghost ghost_tmp) {
+		if (Case_sortie) {
+			Joueur joueur_attaquant = ghost_tmp.getJoueur();
+			if (joueur1_2==joueur_attaquant.getJoueur1_2()
+				&& ghost_tmp.getBon_mauvais())
+			// teste si le fantôme appartient au bon joueur
+			// et que c'est un bon fantôme
+				joueur_attaquant.gagne();
+		}
+		if (ghost==null) ajoute_fantome(ghost_tmp);
+		else capture_fantome(ghost_tmp);
+	}
+
+// ########################## Fonctions toString ########################### //
+
+	public String toString () {
+		String res="";
+		if (Case_sortie && !fantome_present()) {
+			res+="exit ";
+		}
+		else if (fantome_present()) {
+			String joueur="j1";
+			if (!ghost.getJoueur().getJoueur1_2 ()) joueur="j2";
+			String fantome="fb";
+			if (!ghost.getBon_mauvais ()) fantome="fm";
+			if (fantome_visible) res+=joueur+" "+fantome;
+			else res+=joueur+"   ";
+		}
+		else res+="vide ";
+		return res;
+	}
+
+// ######################### Getteurs et Setteurs ########################## //
+
+	public boolean getCase_sortie () {
+		return Case_sortie;
+	}
+	public void setCase_sortie (boolean cs, boolean joueur1_2) {
+		Case_sortie = cs;
+
+		if (cs) {
+			couleur_de_fond = couleur_de_fond_Case_sortie;
+			this.joueur1_2 = joueur1_2;
+		}
+		else {
+			couleur_de_fond = couleur_de_fond_de_base;
+		}
+		//repaint();
+	}
+	/**
+		true : le fantôme appartient au joueur 1<br>
+		false : le fantôme n'est pas présent ou appartient au joueur 2.<br>
+		Utiliser la fonction fantome_present ()
+		pour lever l'ambiguité sur l'existance du fantôme.
+		@see CaseNonGraphique#fantome_present
+	**/
+	public boolean getJoueur1_2() {
+		if (ghost==null) return false;
+		return ghost.getJoueur().getJoueur1_2();
+	}
+	public boolean getJoueur1_2_Case() {
+		return joueur1_2;
+	}
+	public Ghost getGhost () {
+		return ghost;
+	}
+	public Color getCouleur_du_fantome () {
+		if (fantome_present())
+			return ghost.getCouleur();
+		else return null;
+	}
+	public boolean getFantome_visible () {
+		return fantome_visible;
+	}
+	public void setFantome_visible (boolean fantome_visible_tmp) {
+		this.fantome_visible = fantome_visible_tmp;
+	}
+
+// ######################## Fonctions utilitaires ########################## //
+
+	public void aff (String s1) {
+		System.out.println(s1);
+	}
+
+	public void affnn (String s1) {
+		System.out.print(s1);
+	}
+
+	public boolean fantome_present () {
+		return (ghost!=null);
+	}
+
+	public void affiche_info () {
+		aff("Case_sortie : "+Case_sortie);
+		aff("fantome_present : "+fantome_present());
+		if (Case_sortie)
+			aff("Case de sotie pour le joueur : "+joueur1_2);
+	}
+	
+	public boolean fantome_joueur_present (boolean joueur1_2) {
+		if (fantome_present())
+			return (ghost.getJoueur().getJoueur1_2()==joueur1_2);
+		else return false;
+	}
+
+	public boolean fantome_joueur_adverse_present (boolean joueur1_2) {
+		if (fantome_present())
+			return (ghost.getJoueur().getJoueur1_2()!=joueur1_2);
+		else return false;
+	}
+
+	public static int randInt (int min, int max) {
+		int res = (int)(Math.random()*max)+min;
+		if (res>max) res = max;
+		if (res<min) res = min;
+
+		return res;
+	}
+}
+
+# ./src/Controleur.java
+
+import java.awt.Color;
+import javax.swing.JMenuItem;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
+
+class Controleur implements ActionListener, MouseListener {
+	private boolean utilisation_menu;
+	private Fenetre fenetre;
+	private int itemI = 0;
+	private Main main = null;
+	private Jeu jeu = null;
+	private int autre_case=0;
+	private CaseGraphique case0;
+	private boolean selection_initiale;
+	private JMenuItem [] items = null;
+	private CaseGraphique [] selection_initialeT;
+	private CaseGraphique [][] cases;
+
+	public Controleur (Fenetre fenetre, int itemI) {
+		utilisation_menu = true;
+		this.fenetre = fenetre;
+		initilaise_main();
+		if (itemI>-1 && itemI<items.length)
+			this.itemI = itemI;
+	}
+
+	public Controleur (Fenetre fenetre, Plateau plateau, 
+			CaseGraphique [][] cases, CaseGraphique case0) {
+		this.fenetre = fenetre;
+		this.selection_initiale = false;	
+		this.case0 = case0;
+		this.cases = cases;
+		initilaise_main();
+	}
+	
+	public Controleur (CaseGraphique [] selection_initialeT, 
+			CaseGraphique case0) {
+		this.selection_initiale = true;
+		this.case0 = case0;
+		this.selection_initialeT = selection_initialeT;
+		if (case0==selection_initialeT[0])
+			autre_case = 1;
+		initilaise_main();
+	}
+
+	public void initilaise_main () {
+		if (fenetre!=null) {
+			main = fenetre.getMain();
+			items = fenetre.getItems();
+			jeu = main.getJeu();
+		}
+	}
+
+	@Override
+	public void mouseClicked(MouseEvent event) {
+	}
+	@Override
+	public void mouseEntered(MouseEvent event) {
+		// TODO Auto-generated method stub
+		
+	}
+	@Override
+	public void mouseExited(MouseEvent event) {
+		// TODO Auto-generated method stub
+		
+	}
+	@Override
+	public void mousePressed(MouseEvent event) {
+		if (selection_initiale) {
+			case0.select_deselect();
+			selection_initialeT[autre_case].select_deselect();
+			for (int i = 0; i<2; i++) {
+				CaseGraphique casetmp = selection_initialeT[i];
+				if (casetmp.isSelectionne()) {
+					if (casetmp.getCouleur_du_fantome()
+					.equals(Color.red))
+						aff("Fantôme rouge");
+					else 
+						aff("Fantôme bleu");
+				}
+			}
+		}
+		else {
+			//case0.affiche_adresse();
+			/*for (int i=0; i<cases.length; i++) {
+				for (int j=0; j<cases[i].length; j++) {
+					if (cases[i][j].isSelectionne() 
+					&& cases[i][j]!=case0) {
+						cases[i][j].deselect();
+					}
+				}
+			}*/
+			int [] coord_tmp = case0.getAdresse_CaseGraphique();
+			if (case0.isSelectionne()) case0.deselect();
+			else {
+				jeu_graphique(case0);
+				//case0.select();
+			}
+		}
+	}
+	@Override
+	public void mouseReleased(MouseEvent event) {
+	}
+
+// ########################### Jeu graphique ################################# //
+
+	public void jeu_graphique (CaseGraphique case1) {
+		fenetre.jeu_graphique(case1.getPosition());
+	}
+
+// ############## Mise à jour d'une caseGraphique ############################ //
+
+	public void mise_a_jour_cases () {
+		fenetre.mise_a_jour_cases();
+	}
+
+// ##################### Getteurs et setteurs ################################ //
+
+// ##################### Fonctions utilitaires ############################### //
+
+	public void aff (String s1) {
+		System.out.println(s1);
+	}
+
+	public void affnn (String s1) {
+		System.out.print(s1);
+	}
+
+	@Override
+	public void actionPerformed(ActionEvent e) {
+		if (utilisation_menu) {
+			jeu = main.getJeu();
+			if (itemI==0) { // iNouveauJeu
+				fenetre.dispose();
+				main.setJeu(new Jeu(main, true, true, false, false, true));
+				while (main.getJeu_non_graphique()) main.jeu();
+			}
+			if (itemI==1) { // iOuvrirPartie
+				main.relecture();
+				while (main.getJeu_non_graphique()) main.jeu();
+			}
+			if (itemI==2) { // iEnregistrerPartie
+				jeu.setFichier_ouvert(jeu.getSauv()
+				.enregistrer(jeu.getFichier_ouvert(), jeu.getListe_de_coups(), jeu));
+			}
+			if (itemI==3) { // iEnregistrerPartieSous
+				jeu.setFichier_ouvert(jeu.getSauv()
+				.enregistrer("", jeu.getListe_de_coups(), jeu));
+			}
+			if (itemI==4) { // iMode_triche
+				jeu.active_desactive_mode_triche();
+			}
+			if (itemI==5) { // iQuitter
+				System.exit(0);
+			}
+		}
+		//fenetre.setInitial_normal();
+	}
+}
+
+
+# ./src/Fenetre.java
+
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.GridLayout;
+import java.util.List;
+import java.util.ArrayList;
+import java.awt.event.KeyEvent;
+import java.io.File;
+
+import javax.swing.ImageIcon;
+import javax.swing.JFrame;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
+import javax.swing.JPanel;
+import javax.swing.JLabel;
+import javax.swing.KeyStroke;
+import java.awt.event.WindowEvent;
+import javax.swing.WindowConstants;
+import java.awt.event.WindowAdapter;
+
+public class Fenetre extends JFrame {
+	int i, j;
+	private int hauteur = 6;
+	private int largeur = 6;
+	private boolean initialB = false;
+	
+	private char sep = File.separatorChar;
+	//private String images = ".."+sep+"images"+sep;
+	private String images = ".."+sep+".."+sep
+			+"version de demonstration"+sep+"images"+sep;
+	private Plateau plateau;
+	private CaseGraphique [][] cases;
+	private CaseGraphique [] selection_initiale;
+	private Controleur [][] controleur;
+	private Controleur [] controleur_CaseGraphique_initiale;
+	private JMenuItem [] items = null;
+	private Jeu jeu;
+
+	private JMenuBar menuBar;
+	private JMenu mJeu;
+	private JMenuItem iNouveauJeu;
+	private JMenuItem iOuvrirPartie;
+	private JMenuItem iEnregistrerPartie;
+	private JMenuItem iEnregistrerPartieSous;
+	private JMenuItem iMode_triche;
+	private JMenuItem iQuitter;
+	
+	private GridLayout g2;
+	
+	private JPanel p1;
+	private JPanel p2;
+	private JPanel p3;
+	private JPanel p4;
+	private JPanel p5;
+
+	private JLabel lb_errors;
+	private ArrayList<String> liste_derreurs;
+
+	private WindowAdapter wa;
+	
+	public Fenetre (Plateau plateau, Jeu jeu) {
+		super("Jeu des fantômes");
+		//#* Instanciation des champs *#//
+		this.jeu = jeu;
+		this.plateau = plateau;
+		lb_errors = new JLabel();
+		g2 = new GridLayout(1, 1);
+
+		//#* Instanciation des panels *#//
+		p1 = new JPanel();
+		p2 = new JPanel();
+		p3 = new JPanel();
+		p4 = new JPanel();
+		p5 = new JPanel();
+		p4.add(lb_errors);
+		p5.setLayout(g2);
+		p5.add(p4);
+
+		//#* Mise en place de la bande de messages *#//
+		liste_derreurs = new ArrayList<>();
+		selection_initiale = new CaseGraphique [2];
+		cases = new CaseGraphique [hauteur][];
+		controleur = new Controleur[hauteur][];
+		controleur_CaseGraphique_initiale = new Controleur[2];
+		GridLayout g1 = new GridLayout(hauteur, largeur);
+
+		//#* Mise en place du panel de sélection initiale *#//
+		p3.setLayout(g1);
+		BorderLayout bd1 = new BorderLayout();
+		p1.setLayout(bd1);
+		p1.add(p2, BorderLayout.NORTH);
+		p1.add(p3, BorderLayout.SOUTH);
+
+		//#* Mise ne place du plateau de sélection initiale *#//
+		for (i=0; i<2; i++) {
+			selection_initiale[i] = new CaseGraphique(plateau, i, 0);
+			controleur_CaseGraphique_initiale[i] = new Controleur(
+				selection_initiale, selection_initiale[i]);
+			selection_initiale[i].
+				setCaseGraphique_selection_initiale(true);
+			selection_initiale[i].setPreferredSize(new Dimension(30, 
+				30));
+			selection_initiale[i].addMouseListener(
+				controleur_CaseGraphique_initiale[i]);
+			p2.add(selection_initiale[i]);
+		}
+
+		//#* Mise en place du panel de jeu *#//
+		selection_initiale[0].setCouleur_du_fantome(Color.red);
+		selection_initiale[0].select();
+		selection_initiale[1].setCouleur_du_fantome(Color.blue);
+
+		//#* Mise ne place du plateau de jeu graphique *#//
+		for (i=0; i<hauteur; i++) {
+			cases[i] = new CaseGraphique[hauteur];
+			controleur[i] = new Controleur[hauteur];
+			for (j=0; j<largeur; j++) {
+				cases[i][j] = new CaseGraphique(plateau, i, j);
+				cases[i][j].setBackground(Color.WHITE);
+				controleur[i][j] = new Controleur(this, 
+					plateau, cases, 
+					cases[i][j]);
+				cases[i][j].addMouseListener(
+					controleur[i][j]);
+				p3.add(cases[i][j]);
+			}
+		}
+		p1.add(p5, BorderLayout.NORTH);
+		p1.add(p3, BorderLayout.CENTER);
+		this.add(p1);
+		
+		//#* Initialisation de la barre de menu *#//
+		menuBar = new JMenuBar();
+		mJeu = new JMenu("Jeu");
+		mJeu.setMnemonic('j');
+		//mEdition = new JMenu("Edition");
+
+		//#* Initialisation et ajout des boutons dans la barre de menus *#//
+		iNouveauJeu = new JMenuItem("Nouveau jeu");
+		iOuvrirPartie = new JMenuItem("Ouvrir une patie");
+		iEnregistrerPartie = new JMenuItem("Enregistrer une partie");
+		iEnregistrerPartieSous = new JMenuItem(
+			"Enregistrer une partie sous");
+		iMode_triche = new JMenuItem("Mode triche : activer/désactiver");
+		iQuitter = new JMenuItem("Quitter");
+		construit_tab_items();
+		iNouveauJeu.setAccelerator(KeyStroke.getKeyStroke
+			(KeyEvent.VK_N, KeyEvent.CTRL_MASK));
+		iOuvrirPartie.setAccelerator(KeyStroke.getKeyStroke
+			(KeyEvent.VK_O, KeyEvent.CTRL_MASK));
+		iEnregistrerPartie.setAccelerator(KeyStroke.getKeyStroke(
+			KeyEvent.VK_S, KeyEvent.CTRL_MASK));
+		iMode_triche.setAccelerator(KeyStroke.getKeyStroke
+			(KeyEvent.VK_T, KeyEvent.CTRL_MASK));
+		initialise_JMenuItems();
+		
+		//#* Ajout des boutons à la barre de menus *#//
+		this.menuBar.add(mJeu);
+		//this.menuBar.add(mEdition);
+		//#* Ajout de la barre de menus à la fenêtre *#//
+		this.setJMenuBar(menuBar);
+		
+		//#* Mise en place de l'icone de la fenêtre *#//
+		try {
+			this.setIconImage(new ImageIcon(images+"Logo1.png").getImage());
+		}
+		catch (Exception e) {
+			aff("Impossible de charger l'image d'icone de la fenetre.");
+		}
+
+		/**
+			Actions à effectuer lorsque l'on 
+			ferme la fenetre de jeu.
+		**/
+		final Jeu jeuFinal = jeu;
+		wa = new WindowAdapter() {
+			public void windowClosing(WindowEvent e) {
+				jeuFinal.reinitialise_main();
+			}
+		};
+		addWindowListener(wa);
+
+		/**
+			Réglage de la taille, de la localisation  des 
+			options de fermeture et affichage de la fenêtre
+		**/
+		this.setMinimumSize(new Dimension(300, 336));
+		//this.setPreferredSize(new Dimension(640, 480));
+		this.setLocationRelativeTo(null);
+		setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+		mise_a_jour_cases();
+		revalidate();
+		this.setVisible(true);
+	}
+
+// ########################## Menu graphiques ############################### //
+
+
+	/**
+		Recherche un JMenuItem dans le tableau donné par la fonction 
+		getItems(). <br>
+		Retourne -1 si ne trouve pas. <br>
+		@see Fenetre#getItems
+	**/
+	public int recherche_item (JMenuItem tmp) {
+		JMenuItem [] tab = getItems();
+		for (int i = 0; i<tab.length; i++) {
+			if (tab[i]==tmp) return i;
+		}
+		return -1;
+	}
+
+	public void initialise_controleur_JMenuItem (JMenuItem tmp) {
+		tmp.addActionListener(new Controleur(this, recherche_item(tmp)));
+	}
+
+	public void initialise_JMenuItems () {
+		for (int i=0; i<items.length; i++) {
+			initialise_controleur_JMenuItem(items[i]);
+			this.mJeu.add(items[i]);
+		}
+	}
+
+// ######################### Selection initiale ############################# //
+
+	public void setInitial_normal () {
+		if (initialB) setNormal();
+		else setInitial();
+	}
+	
+	public void setInitial () {
+		initialB = true;
+		g2 = new GridLayout(2, 1);
+		p5.setLayout(g2);
+		p5.add(p2);
+		revalidate();
+		repaint();
+	}
+
+	public void setNormal () {
+		initialB = false;
+		p5.remove(p2);
+		g2 = new GridLayout(1, 1);
+		p5.setLayout(g2);
+		revalidate();
+		repaint();
+	}
+
+// ############## Afficher une erreure dans le Label ####################### //
+
+	/**
+		Ajoute le message message dans le label prévus à cet effet.
+	**/
+	public void add_message (String message) {
+		liste_derreurs.add(message);
+		met_a_jour_lb_errors();
+	}
+
+	/**
+		Enlève le message message du label prévus à cet effet.
+	**/
+	public void remove_message (String message) {
+		liste_derreurs.remove(message);
+		met_a_jour_lb_errors();
+	}
+
+	public void remove_all_messages () {
+		liste_derreurs.clear();
+		met_a_jour_lb_errors();
+	}
+
+	/**
+		Met à jour le label d'affichage des erreures en<br>
+		fonction de liste_derreurs.<br>
+		@see Fenetre#liste_derreurs
+	**/
+	public void met_a_jour_lb_errors () {
+		// On ajoute le html pour le saut de lignes 
+		// (sinon, ça ne marche pas).
+		String res = "<html>";
+		for (String s1 : liste_derreurs) {
+			res+=s1+"<br>";
+		}
+		res+="</html>";
+
+		lb_errors.setText(res);
+		revalidate();
+		repaint();
+	}
+
+// ########################## Jeu graphique ################################ //
+
+	public void jeu_graphique (String case1) {
+		jeu.jeu_graphique(case1);
+	}
+
+	public void mode_triche_active () {
+		ArrayList<String> AL1;
+		AL1 = plateau.getCoordonnes_pions(jeu.getJoueur(true));
+		for (String s1 : AL1) {
+			getCase(s1).setFantome_visible(true);
+		}
+		AL1 = plateau.getCoordonnes_pions(jeu.getJoueur(false));
+		for (String s1 : AL1) {
+			getCase(s1).setFantome_visible(true);
+		}
+	}
+
+	public void mode_triche_desactive (Joueur joueur) {
+		ArrayList<String> AL1;
+		AL1 = plateau.getCoordonnes_pions(joueur);
+		for (String s1 : AL1) {
+			getCase(s1).setFantome_visible(true);
+		}
+		//aff("joueur : "+joueur);
+		//aff("joueur oppposé : "+jeu.getJoueur(!joueur.getJoueur1_2()));
+		AL1 = plateau.getCoordonnes_pions(jeu.getJoueur(!joueur.getJoueur1_2()));
+		for (String s1 : AL1) {
+			getCase(s1).setFantome_visible(false);
+		}
+	}
+
+// ##################### Mise à jour des cases ############################# //
+
+	public void mise_a_jour_cases () {
+		for (int i=0; i<cases.length; i++) {
+			for (int j=0; j<cases[i].length; j++) {
+				cases[i][j].mise_a_jour(plateau.getCase(i, j));
+			}
+		}
+	}
+
+// ####################### Fonctions utilitaires ########################### //
+
+	public void aff (String s1) {
+		System.out.println(s1);
+	}
+
+	public void affnn (String s1) {
+		System.out.print(s1);
+	}
+	
+	public static int randInt (int min, int max) {
+		int res = (int)(Math.random()*max)+min;
+		if (res>max) res = max;
+		if (res<min) res = min;
+
+		return res;
+	}
+	
+// ####################### Getteurs et setteurs ############################ //
+
+	public Main getMain () {
+		if (jeu==null) return null;
+		return jeu.getMain();
+	}
+
+	public boolean isInitialB() {
+		return initialB;
+	}
+
+	public void setInitialB(boolean initialB) {
+		if (initialB) setInitial();
+		else setNormal();
+	}
+
+	public CaseGraphique [][] getPlateau () {
+		return cases;
+	}
+
+	public CaseGraphique getCase (int i, int j) {
+		if (i<0 || i>=cases.length) return null;
+		if (j<0 || j>=cases[0].length) return null;
+		return cases[i][j];
+	}
+
+	public CaseGraphique getCase (String case1) {
+		int [] tmp = plateau.ConvertString_Coordonnees(case1);
+		if (tmp==null) return null;
+		if (tmp.length!=2) return null;
+		int i = tmp[0], j = tmp[1];
+		if (i<0 || i>=cases.length 
+			|| j<0 || j>=cases[0].length) 
+				return null;
+		return getCase(i, j);
+	}
+
+	public void setMode_triche (boolean mode_triche_tmp) {
+		if (mode_triche_tmp)
+			mode_triche_active();
+	}
+
+	public JMenuItem [] getItems () {
+		return items;
+	}
+
+	public void construit_tab_items () {
+		items = new JMenuItem[6];
+
+		items[0] = iNouveauJeu;
+		items[1] = iOuvrirPartie;
+		items[2] = iEnregistrerPartie;
+		items[3] = iEnregistrerPartieSous;
+		items[4] = iMode_triche;
+		items[5] = iQuitter;
+	}
+}
+
+
+# ./src/GameLoadingException.java
+
+class GameLoadingException extends RuntimeException {
+	public GameLoadingException (String s) {
+		super(s);
+	}
+}
+
+# ./src/Ghost.java
+
+import java.awt.Color;
+
+class Ghost {
+	private Joueur joueur;
+	private Color couleur;
+	/**
+		Fantôme bon ou mauvais : <br>
+			true : bon <br>
+			false : mauvais
+	**/
+	private boolean bon_mauvais;
+
+	public Ghost (Joueur j1, boolean bon_mauvais) {
+		this.joueur = j1;
+		this.bon_mauvais = bon_mauvais;
+		if (bon_mauvais) this.couleur = Color.blue;
+		else this.couleur = Color.red;
+	}
+
+	/**
+		Pour les extensions
+	**/
+	public Ghost (Joueur j1, boolean bon_mauvais, Color couleur) {
+		this(j1, bon_mauvais);
+		this.couleur = couleur;
+	}
+
+// ######## fonction toString ########################################### //
+
+	public String toString () {
+		String res = "";
+		if(joueur.getJoueur1_2()) {
+			res="X";
+			if (!bon_mauvais) res="x";
+		}
+		else {
+			res="Y";
+			if (!bon_mauvais) res="y";
+		}
+		return res;
+	}
+
+// ##### Getteurs et Setteurs ########################################### //
+
+	public Color getCouleur () {
+		return this.couleur;
+	}
+
+	public boolean getBon_mauvais () {
+		return bon_mauvais;
+	}
+
+	public Joueur getJoueur () {
+		return joueur;
+	}
+}
+
+# ./src/Jeu.java
+
+import java.io.IOException;
+import java.util.ArrayList;
+
+import javax.swing.JOptionPane;
+
+class Jeu {
+	private Plateau plateau;
+	private Tour_de_jeu tour;
+	private Menu_non_graphique menu;
+	private Sauvegarde sauv;
+	private int gain_par_case_sortie_j1 = 0;
+	private int gain_par_case_sortie_j2 = 0;
+	private Mouvements mouvements;
+	private boolean jeu_graphique_commence = false;
+	private boolean jeu_non_graphique = true;
+	private Fenetre fenetre;
+	private Joueur j1;
+	private Joueur j2;
+	private ArrayList<String> liste_de_coups;
+	private int numero_coup = 1;
+	private String fichier_ouvert = "";
+	private String typeJeu = "";
+	private boolean jeu_humain=true;
+	private boolean jeu_completement_humain=true;
+	private boolean choix_pions_auto = false;
+	private Main main = null;
+	/**
+		Désigne le joueur dont c'est le<br>
+		tour de jouer durant le jeu graphique.<br>
+		true : c'est le tour du joueur 1<br>
+		false : c'est le tour du joueur 2
+	**/
+	private boolean joueur_du_tour_graphique = true;
+	private String case1 = "";
+	private int fin_du_jeu_graphique = -1;
+	/**
+		mode_triche : <br>
+			true : activé <br>
+			false : désactivé
+	**/
+	private boolean mode_triche = false;
+
+	public Jeu (Main main, boolean j1B, boolean j2B, boolean jeu_non_graphique, 
+			boolean mode_triche) 
+			throws BoardGenerationException {
+			this (main, j1B, j2B, jeu_non_graphique, 
+				mode_triche, true);
+	}
+
+	public Jeu (Main main, boolean j1B, boolean j2B, boolean jeu_non_graphique, 
+			boolean mode_triche, boolean choix_pions_auto) 
+			throws BoardGenerationException {
+		this.main = main;
+		this.jeu_non_graphique = jeu_non_graphique;
+		this.choix_pions_auto = choix_pions_auto;
+		this.mode_triche = mode_triche;
+		plateau = new Plateau(6, 6);
+		initialisation_du_jeu(j1B, j2B, jeu_non_graphique);
+	}
+
+	public void initialisation_du_jeu (boolean j1B, boolean j2B, 
+			boolean jeu_non_graphique) {
+		/**
+			Joueur : <br>
+				H : humain <br>
+				C : ordinateur (computer) <br>
+			Jeu : <br>
+				G : graphique <br>
+				T : non graphique (terminal)
+		**/
+		if (j1B) typeJeu+="H";
+		else typeJeu+="C";
+		if (j2B) typeJeu+="H";
+		else typeJeu+="C";
+		if (jeu_non_graphique) typeJeu+="T";
+		else  typeJeu+="G";
+
+		Plateau_initial pi;
+		liste_de_coups = new ArrayList<>();
+		j1 = new Joueur(j1B, true);
+		j2 = new Joueur(j2B, false);
+		jeu_humain = (j1.getJoueur_humain_ordinateur() 
+				|| j2.getJoueur_humain_ordinateur());
+		jeu_completement_humain = (j1.getJoueur_humain_ordinateur() 
+				&& j2.getJoueur_humain_ordinateur());
+		// On vérifie s'il y a au moins 1 joueur humain
+		sauv = new Sauvegarde();
+		pi = new Plateau_initial(plateau.getPlateau(), j1, choix_pions_auto);
+		plateau.setPlateau(pi.getPlateau());
+		pi = new Plateau_initial(plateau.getPlateau(), j2, choix_pions_auto);
+		String [] tmp = pi.sauve_coups_initiaux(plateau);
+		liste_de_coups.add(tmp[0]);
+		liste_de_coups.add(tmp[1]);
+		plateau.setPlateau(pi.getPlateau());
+		if (jeu_non_graphique) {
+			tour = new Tour_de_jeu(plateau);
+			mouvements = new Mouvements(plateau);
+			menu = new Menu_non_graphique();
+			if (!jeu_humain) affiche();
+			if (mode_triche) plateau.setMode_triche(this, true);
+		}
+		else {
+			fenetre = new Fenetre(plateau, this);
+			mouvements = new Mouvements(plateau);
+			tour = new Tour_de_jeu(plateau);
+			setJeu_graphique_commence(true);
+			if (mode_triche)
+				fenetre.setMode_triche(true);
+			else {
+				if (!j1B)
+					fenetre.mode_triche_desactive(
+						getJoueur(false));
+				else
+					fenetre.mode_triche_desactive(
+						getJoueur(true));
+			}
+		}
+	}
+
+// ############################# Exécution du jeu ############################# //
+
+	/**
+		Exécute le jeu non graphique.<br>
+		Renvoie un int : <br>
+		1 : le joueur 1 gagne<br>
+		2 : le joueur 2 gagne
+	**/
+	public int jeu_non_graphique () {
+		int res = detecte_fin_jeu();
+		int menu_tmp = 0;
+		while (res==0) {
+			if (!mode_triche && j1.getJoueur_humain_ordinateur())
+				plateau.mode_triche_desactive(this, j1);
+			if (jeu_humain) affiche(j1);
+			aff("");
+			menu_tmp = menu_jeu_non_graphique(
+				j1.getJoueur_humain_ordinateur());
+			if (menu_tmp==-1) return 0;
+			if (menu_tmp==1) {
+				tour.joue(j1, mouvements);
+				res = detecte_fin_jeu();
+				if (!jeu_humain) affiche(j1);
+				ajoute_coup(true);
+			}
+			if (!mode_triche && j2.getJoueur_humain_ordinateur())
+				plateau.mode_triche_desactive(this, j2);
+			if (jeu_humain) affiche(j2);
+			aff("");
+			menu_tmp = menu_jeu_non_graphique(
+				j2.getJoueur_humain_ordinateur());
+			if (menu_tmp==-1) return 0;
+			if (res==0 && menu_tmp==1) {
+				// le jeu s'arrête ici si le joueur 1 a gagné.
+				tour.joue(j2, mouvements);
+				res = detecte_fin_jeu();
+				if (!jeu_humain) affiche(j2);
+				ajoute_coup(false);
+			}
+			incremente_numero_coup();
+		}
+		return res;
+	}
+
+	public void jeu_graphique (String case1) {
+		int tour=-1;
+		fin_du_jeu_graphique = -1;
+		boolean tour_de_jeuB = false;
+		if (this.case1.isEmpty()) tour_de_jeuB = true;
+		int [] coord_tmp_case1 = plateau.ConvertString_Coordonnees(case1);
+		if (!tour_de_jeuB)
+			coord_tmp_case1 = plateau.ConvertString_Coordonnees(this.case1);
+		int [] coord_tmp_case2 = plateau.ConvertString_Coordonnees(case1);
+
+		Joueur joueur_tmp = j1;
+		if (!joueur_du_tour_graphique) joueur_tmp = j2;
+		// on décide le joueur qui jouera au tour suivant
+
+		if (tour_de_jeuB) this.case1 = case1;
+		// ######## Affichage pour le débuggage ###### //
+		/*affnn("\ncase1 = ");
+		if (tour_de_jeuB) aff(case1);
+		else {
+			aff(this.case1);
+			aff("case2 = "+case1);
+		}*/
+		// ########################################### //
+		tour = this.tour.tour_de_jeu_graphique(joueur_tmp, mouvements, 
+			this.case1, case1, tour_de_jeuB);
+		if (tour==-1) {
+			this.case1="";
+			fenetre.getCase(coord_tmp_case1[0], coord_tmp_case1[1]).deselect();
+		}
+		tour = this.tour.tour_de_jeu_graphique(joueur_tmp, mouvements, 
+			this.case1, case1, tour_de_jeuB);
+		//aff("tour = "+tour);
+		if (tour==0) {
+			fenetre.getCase(coord_tmp_case2[0], coord_tmp_case2[1]).select();
+		}
+		if (tour==0 && !tour_de_jeuB) {
+			if (!mode_triche && getJoueur(!joueur_tmp.getJoueur1_2())
+				.getJoueur_humain_ordinateur()) 
+				fenetre.mode_triche_desactive(getJoueur(!joueur_tmp.getJoueur1_2()));
+			//aff("joueur en cours : "+joueur_tmp);
+			deplace_pion_graphique(this.case1, case1);
+			deselect_case(this.case1);
+			deselect_case(case1);
+			if (joueur_du_tour_graphique) joueur_du_tour_graphique = false;
+			else joueur_du_tour_graphique = true;
+			this.case1 = "";
+			//aff("joueur_du_tour_graphique : "+joueur_du_tour_graphique);
+			if (j1.getJoueur_humain_ordinateur() 
+					&& !joueur_du_tour_graphique) {
+				ajoute_coup(true);
+			}
+			String coup_joue_tmp = plateau.getCoup_joue();
+			joueur_du_tour_graphique = 
+				joue_ordi_aux(joueur_du_tour_graphique, true);
+			if (j2.getJoueur_humain_ordinateur() 
+					&& ((!jeu_completement_humain 
+					&& !joueur_du_tour_graphique)
+					|| (jeu_completement_humain 
+					&& joueur_du_tour_graphique))) {
+				ajoute_coup(coup_joue_tmp, false);
+				incremente_numero_coup();
+			}
+			fin_du_jeu_graphique = detecte_fin_jeu();
+			if (fin_du_jeu_graphique!=0) {
+				fin_du_jeu(fin_du_jeu_graphique);
+				setJeu_graphique_commence(false);
+			}
+		}
+		if (tour==0 && tour_de_jeuB) {
+			this.case1 = case1;
+			fenetre.getCase(coord_tmp_case1[0], coord_tmp_case1[1]).select();
+		}
+		if (tour==-2) {
+			this.case1="";
+			fenetre.getCase(coord_tmp_case1[0], coord_tmp_case1[1]).deselect();
+		}
+	}
+
+	public void jeu_ordinateur_graphique (Joueur joueur, Mouvements mouv) {
+		String [] tmp = tour.joue_ordi_aux(joueur, mouv, false);
+		// n'affiche pas le coup joué (boolean graphique = false).
+		deplace_pion_graphique(tmp[0], tmp[1]);
+		fin_du_jeu_graphique = detecte_fin_jeu();
+		if (fin_du_jeu_graphique!=0) {
+			fin_du_jeu(fin_du_jeu_graphique);
+			setJeu_graphique_commence(false);
+		}
+	}
+
+// ##************# Fonction utilitaires pour le jeu graphique #**************## //
+
+	public void select_case (String case1) {
+		if (fenetre==null) return;
+		int [] coord_tmp_case = plateau.ConvertString_Coordonnees(case1);
+		fenetre.getCase(coord_tmp_case[0], coord_tmp_case[1]).select();
+	}
+
+	public void deselect_case (String case1) {
+		if (fenetre==null) return;
+		int [] coord_tmp_case = plateau.ConvertString_Coordonnees(case1);
+		fenetre.getCase(coord_tmp_case[0], coord_tmp_case[1]).deselect();
+	}
+
+	public void change_message (String message) {
+		if (fenetre==null) return;
+		fenetre.remove_all_messages();
+		fenetre.add_message(message);
+	}
+
+	/**
+		Effectue un déplace un pion et met à jour le plateau graphique en conséquences.
+	**/
+	public void deplace_pion_graphique (String case1, String case2) {
+		plateau.deplace_fantome(case1, case2);
+		if (!mode_triche)
+			fenetre.mode_triche_desactive(getJoueur(!joueur_du_tour_graphique));
+		met_a_jour_deux_cases(case1, case2);
+	}
+
+	/**
+		Met à jour deux cases sur le plateau graphique 
+		(pour les déplacements).
+	**/
+	public void met_a_jour_deux_cases (String case1, String case2) {
+		int [] coord_tmp_case = plateau.ConvertString_Coordonnees(case1);
+		fenetre.getCase(coord_tmp_case[0], coord_tmp_case[1])
+		.mise_a_jour(plateau.getCase(coord_tmp_case[0], coord_tmp_case[1]));
+
+		coord_tmp_case = plateau.ConvertString_Coordonnees(case2);
+		fenetre.getCase(coord_tmp_case[0], coord_tmp_case[1])
+		.mise_a_jour(plateau.getCase(coord_tmp_case[0], coord_tmp_case[1]));
+	}
+
+	public void change_message_joueur (Joueur joueur) {
+		change_message("C'est à "+joueur+" de jouer");
+	}
+
+	public Joueur echange_joueur (boolean joueur_du_tour_graphique) {
+		Joueur joueur = j1;
+		if (!joueur_du_tour_graphique) {
+			joueur = j2;
+		}
+		/*if (!mode_triche && joueur.getJoueur_humain_ordinateur()) 
+			fenetre.mode_triche_desactive(joueur);*/
+		return joueur;
+	}
+
+	public boolean joue_ordi_aux (boolean joueur_du_tour_graphique,
+			boolean echange_au_debut) {
+		int i=0;
+		boolean joueur_ordi = false;
+		Joueur joueur_t1 = j1;
+		Joueur joueur_t2 = j2;
+		joueur_t2 = echange_joueur (joueur_du_tour_graphique);
+		if (joueur_t2==j1) joueur_t1 = j2;
+		//aff("C'est a "+joueur_t2+" de jouer");
+		//aff("joueur_du_tour_graphique : "+joueur_du_tour_graphique);
+		do {
+			if (echange_au_debut) change_message_joueur(joueur_t2);
+			if (!joueur_t2.getJoueur_humain_ordinateur()) {
+				jeu_ordinateur_graphique(joueur_t2, mouvements);
+				if (!j1.getJoueur_humain_ordinateur()) {
+					ajoute_coup(true);
+				}
+				if(!j2.getJoueur_humain_ordinateur()) {
+					ajoute_coup(false);
+					incremente_numero_coup();
+				}
+				if (joueur_du_tour_graphique)
+					joueur_du_tour_graphique = false;
+				else joueur_du_tour_graphique = true;
+				joueur_t2 = echange_joueur (joueur_du_tour_graphique);
+				if (joueur_t2==j1) joueur_t1 = j2;
+				change_message_joueur(joueur_t2);
+				joueur_ordi = !joueur_t2.getJoueur_humain_ordinateur();
+			}
+			fin_du_jeu_graphique = detecte_fin_jeu();
+			if (fin_du_jeu_graphique!=0) {
+				//aff("fin du jeu");
+				fin_du_jeu(fin_du_jeu_graphique);
+				setJeu_graphique_commence(false);
+				return joueur_du_tour_graphique;
+			}
+
+		} while (joueur_ordi && jeu_graphique_commence);
+		return joueur_du_tour_graphique;
+	}
+
+	public void active_desactive_mode_triche () {
+		if (mode_triche) setMode_triche(false);
+		else setMode_triche(true);
+	}
+
+// ##******************# Menu pour le jeu non graphique #********************## //
+
+	/**
+		return -1 en cas d'erreur.
+	**/
+	public int menu_jeu_non_graphique (boolean joueur_humain) {
+		if (!jeu_non_graphique) return -1;
+		int menu_tmp=0;
+		if (!joueur_humain)
+			return 1;
+		else {
+			while (menu_tmp!=1) {
+				menu_tmp = menu.menu_tour_de_jeu();
+				if (menu_tmp==2) {
+					//sauvegarder la partie
+					fichier_ouvert = sauv.enregistrer(
+						fichier_ouvert, liste_de_coups, this);
+				}
+				if (menu_tmp==3) {
+					return -1;
+				}
+			}
+		}
+		return menu_tmp;
+	}
+
+// ######################## Affichage graphique ############################### //
+
+	/**
+		Met à jour le plateau graphique 
+		si le jeu est graphique.
+	**/
+	public void met_a_jour_plateau_graphique () {
+		if (!jeu_non_graphique && fenetre!=null) {
+			fenetre.mise_a_jour_cases();
+		}
+	}
+
+
+// ######################### Affichage non graphique ########################## //
+
+	/**
+		Affiche le plateau de jeu dans le terminal.
+	**/
+	public void affiche () {
+		aff(""+plateau);
+	}
+
+	/**
+		Affiche le nom du joueur qui joue ansi
+		que le plateau de jeu dans le terminal.
+	**/
+	public void affiche (Joueur joueur) {
+		aff(""+plateau);
+		aff("C'est a "+joueur+" de jouer.");
+	}
+
+// ############################ Sauvegarde des coups ########################## //
+
+	public void ajoute_coup (String coup_joue, boolean premier_coup) {
+		String numero_coup_Str = ""+numero_coup;
+		if (!premier_coup) numero_coup_Str="";
+		String res = numero_coup_Str+" - "+coup_joue;
+		//aff(res);
+		liste_de_coups.add(res);
+	}
+	
+	public void ajoute_coup (boolean premier_coup) {
+		String numero_coup_Str = ""+numero_coup;
+		if (!premier_coup) numero_coup_Str="";
+		String res = numero_coup_Str+" - "+plateau.getCoup_joue();
+		//aff(res);
+		liste_de_coups.add(res);
+	}
+
+// ################################ Fin du jeu ################################ //
+
+	/**
+		Compte un tour avant d'attribuer la victoire<br>
+		grâce au placement d'un bon fantôme sur une case<br>
+		sortie adverse.
+	**/
+	public int detecte_gain_par_case_sortie () {
+		if (j1.getGagne()) gain_par_case_sortie_j1++;
+		if (j2.getGagne()) gain_par_case_sortie_j2++;
+		// ça doit être > 2 car on vérifie après chaque joueur
+		// (on exécute cette fonction après chaque joueur).
+		if (gain_par_case_sortie_j1>2) return 1;
+		if (gain_par_case_sortie_j2>2) return 2;
+		return 0;
+	}
+
+	/**
+		0 : le jeu continue<br>
+		1 : le joueur 1 a gagne<br>
+		2 : le joueur 2 a gagne
+	**/
+	public int detecte_fin_jeu () {
+		int tmp = detecte_gain_par_case_sortie();
+		if (tmp!=0) return tmp;
+		if (j1.getNbr_de_fantomes_mauvais()==0) return 1;
+		if (j2.getNbr_de_fantomes_mauvais()==0) return 2;
+		if (j1.getNbr_de_fantomes_bons()==0) return 2;
+		if (j2.getNbr_de_fantomes_bons()==0) return 1;
+		return 0;
+	}
+
+	/**
+		Si gagnant = 1 : le joueur gagnant est le joueur 1<br>
+		si gagnant = 2 : le joueur gagnant est le joueur 2
+	**/
+	public void fin_du_jeu (int gagnant) {
+		if (gagnant!=1 && gagnant!=2) return;
+		if (!jeu_graphique_commence) return;
+		String joueur = ""+j2, message="";
+		if (gagnant==1) joueur = ""+j1;
+		message = "Le gagnant est "+joueur+".";
+
+		if (jeu_non_graphique) {
+			aff(message);
+		}
+		else {
+			JOptionPane jop1;
+			jop1 = new JOptionPane();
+			jop1.showMessageDialog(null, 
+				message, 
+				"Fin du jeu", 
+				JOptionPane.INFORMATION_MESSAGE);
+		}
+	}
+
+// ##################### Getteurs et setteurs ################################# //
+
+	public String getTypeJeu () {
+		return typeJeu;
+	}
+
+	public Plateau getPlateau () {
+		return plateau;
+	}
+
+	public Fenetre getFenetre () {
+		return fenetre;
+	}
+
+	public boolean getJeu_non_graphique () {
+		return jeu_non_graphique;
+	}
+
+	public boolean getJeu_graphique_commence () {
+		return this.jeu_graphique_commence;
+	}
+
+	public void setJeu_graphique_commence (boolean jeu_commence) {
+		jeu_graphique_commence = jeu_commence;
+		if (jeu_commence) {
+			case1 = "";
+			joueur_du_tour_graphique = true;
+			if (joueur_du_tour_graphique)
+				fenetre.add_message("C'est à "+j1+" de jouer");
+			else 
+				fenetre.add_message("C'est à "+j2+" de jouer");
+			if (!j1.getJoueur_humain_ordinateur()) {
+				joueur_du_tour_graphique = 
+					joue_ordi_aux(joueur_du_tour_graphique, false);
+			}
+		}
+		else {
+			reinitialise_main();
+		}
+	}
+
+	/**
+		Retourne un Joueur.
+		joueur1_2 : <br>
+			true : joueur 1<br>
+			false : joueur 2
+	**/
+	public Joueur getJoueur (boolean joueur1_2) {
+		if (joueur1_2) return j1;
+		else return j2;
+	}
+
+	public Mouvements getMouvements () {
+		return mouvements;
+	}
+
+	public Main getMain () {
+		return main;
+	}
+
+	public ArrayList<String> getListe_de_coups () {
+		return liste_de_coups;
+	}
+
+	public String getFichier_ouvert () {
+		return fichier_ouvert;
+	}
+
+	public void setFichier_ouvert (String tmp) {
+		fichier_ouvert = tmp;
+	}
+
+	public Sauvegarde getSauv () {
+		return sauv;
+	}
+
+	public boolean getMode_triche () {
+		return mode_triche;
+	}
+
+	public void setMode_triche (boolean tmp) {
+		mode_triche = tmp;
+		if (mode_triche) {
+			fenetre.mode_triche_active();
+		}
+		else {
+			Joueur joueur_tmp = j1;
+			if (!joueur_du_tour_graphique) joueur_tmp = j2;
+			fenetre.mode_triche_desactive(joueur_tmp);
+		}
+	}
+
+// ################### Fonctions utilitaires ################################## //
+
+	public void reinitialise_main () {
+		if (fenetre!=null) fenetre.dispose();
+		main.initialise_main(main.getArgs());
+	}
+
+	public void aff (String s1) {
+		System.out.println(s1);
+	}
+
+	public void affnn (String s1) {
+		System.out.print(s1);
+	}
+
+// #************ Fonctions utilitaires pour la sauvegarde des coups *********# //
+
+	public void incremente_numero_coup () {
+		numero_coup++;
+	}
+}
+
+
+# ./src/Joueur.java
+
+import java.awt.Color;
+
+class Joueur {
+	private String nom="";
+	/**
+		Joueur 1 ou 2 : <br>
+			true : joueur 1<br>
+			false : joueur 2
+	**/
+	private boolean joueur1_2;
+	/**
+		joueur_humain_ordinateur : <br>
+			true : humain<br>
+			false : ordinateur
+	**/
+	private boolean joueur_humain_ordinateur = false;
+	private boolean gagne = false;
+	private int nbr_de_fantomes_mauvais = 0;
+	private int nbr_de_fantomes_bons = 0;
+	private int bons_fantomes_captures = 0;
+	private int mauvais_fantomes_captures = 0;
+
+	public Joueur (boolean joueur_humain_ordinateur, boolean joueur1_2) {
+		this.joueur_humain_ordinateur = joueur_humain_ordinateur;
+		this.joueur1_2 = joueur1_2;
+		if (nom.isEmpty()) {
+			if (joueur1_2) this.nom = "Joueur 1";
+			else this.nom = "Joueur 2";
+		}
+	}
+
+	public Joueur (String nom, boolean joueur_humain_ordinateur, 
+			boolean joueur1_2) {
+		this(joueur_humain_ordinateur, joueur1_2);
+		this.nom = nom;
+	}
+
+// ################### Fonctions utilitaires ################################# //
+
+	public void aff (String s1) {
+		System.out.println(s1);
+	}
+
+	public void affnn (String s1) {
+		System.out.print(s1);
+	}
+
+	/**
+		Affiche des informations sur le joueur (pour le débuggage).
+	**/
+	public void aff_info () {
+		aff("Nom : "+nom);
+		aff("joueur_humain_ordinateur : "+joueur_humain_ordinateur);
+		aff("nbr_de_fantomes_bons : "+nbr_de_fantomes_bons);
+		aff("nbr_de_fantomes_mauvais : "+nbr_de_fantomes_mauvais);
+		aff("bons_fantomes_captures : "+bons_fantomes_captures);
+		aff("mauvais_fantomes_captures : "+mauvais_fantomes_captures);
+		aff("gagne = "+gagne);
+	}
+
+// ################# Fantômes ########################################### //
+
+	/**
+		Bon  : true
+		Mauvais : false
+	**/
+	public void capture_fatome (boolean bon_mauvais) {
+		if (bon_mauvais) bons_fantomes_captures++;
+		else mauvais_fantomes_captures++;
+	}
+
+	/**
+		Bon  : true
+		Mauvais : false
+	**/
+	public void se_fait_capturer_un_fatome (boolean bon_mauvais) {
+		if (bon_mauvais) nbr_de_fantomes_bons--;
+		else nbr_de_fantomes_mauvais--;
+	}
+
+// ############################ Fin du jeu ############################## //
+
+	public void gagne () {
+		gagne = true;
+	}
+
+// ######################### Fonction toString ########################## //
+
+	public String toString () {
+		return nom;
+	}
+
+// ############## Getteurs et Setteurs ################################## //
+
+	public String getNom () {
+		return this.nom;
+	}
+	public boolean getJoueur1_2 () {
+		return this.joueur1_2;
+	}
+	public int getNbr_de_fantomes_bons() {
+		return nbr_de_fantomes_bons;
+	}
+	public int getNbr_de_fantomes_mauvais() {
+		return nbr_de_fantomes_mauvais;
+	}
+	public int getNbr_de_fantomes() {
+		return nbr_de_fantomes_mauvais+nbr_de_fantomes_bons;
+	}
+	public boolean getJoueur_humain_ordinateur () {
+		return joueur_humain_ordinateur;
+	}
+
+	public void setNbr_fantomes_bons(int tmp) {
+		nbr_de_fantomes_bons = tmp;
+	}
+	public void setNbr_fantomes_mauvais(int tmp) {
+		nbr_de_fantomes_mauvais = tmp;
+	}
+	public void setJoueur_humain_ordinateur (
+			boolean joueur_humain_ordinateur) {
+		this.joueur_humain_ordinateur = joueur_humain_ordinateur;
+	}
+	public int getBons_fantomes_captures () {
+		return bons_fantomes_captures;
+	}
+	public int getMauvais_fantomes_captures () {
+		return mauvais_fantomes_captures;
+	}
+	public void setBons_fantomes_captures (int tmp) {
+		bons_fantomes_captures = tmp;
+	}
+	public void setMauvais_fantomes_captures (int tmp) {
+		mauvais_fantomes_captures = tmp;
+	}
+	public boolean getGagne () {
+		return gagne;
+	}
+
+}
+
+# ./src/LectureEcriture.java
+
+import java.awt.FileDialog;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+
+import javax.swing.JFileChooser;
+
+/**
+	Cette classe permet de lire et d'ecrire dans un fichier.
+	@author Cyrille & Fatou
+**/
+public class LectureEcriture {
+	private File file = null;
+	/** Gère la lecture dans le ficher nom_du_fichier **/
+	private BufferedReader lire_fichier;
+	/** Gère l'écriture dans le ficher nom_du_fichier **/
+	private BufferedWriter ecrire_fichier;
+	/** Nom et chemin d'accès du fichier **/
+	private String nom_du_fichier = "";
+	/** mode d'ouverture : <br>
+		r : read <br>
+		w : write
+	**/
+	private char mode; 
+
+	/**
+		boolean ouvrir_enregistrer : <br>
+		true : ouvrir <br>
+		false : enregistrer
+	**/
+	public LectureEcriture (char mode) throws IOException {
+		this("", mode);
+	}
+
+	public LectureEcriture (String nom_du_fichier, char mode) throws IOException {
+		if (nom_du_fichier.isEmpty()) {
+			if (mode!='r' && mode!='w') throw new IOException();
+			if (mode=='r') {
+				initialise_LE (chemin_file(true), mode);
+			}
+			else {
+				initialise_LE (chemin_file(false), mode);
+			}
+		}
+		else initialise_LE (nom_du_fichier, mode);
+	}
+
+	/**
+		Initialise LectureEcriture.
+		@param nom_du_fichier
+		@param mode
+	**/
+	public void initialise_LE (String nom_du_fichier, char mode) throws IOException  {
+		String message_derreur = "Aucun fichier selectionne.";
+		if (nom_du_fichier==null) {
+			throw new IOException(message_derreur);
+		}
+		if (nom_du_fichier.equals("null")) {
+			throw new IOException(message_derreur);
+		}
+		if (nom_du_fichier.isEmpty()) {
+			throw new IOException(message_derreur);
+		}
+		if (mode!='r' && mode!='w')
+			throw new IOException("Mode de lecture/ecriture incorrect");
+		this.nom_du_fichier = nom_du_fichier;
+		this.mode  = mode;
+		file = new File(nom_du_fichier);
+		ouvrir();		
+	}
+	
+// ################### Fonctions utilitaires de sauvegarde ##################### //
+
+	/**
+		boolean ouvrir_enregistrer : <br>
+		true : ouvrir <br>
+		false : enregistrer <br><br>
+		
+		@return le chemin du fichier selectionné.
+	**/
+	public String chemin_file (boolean ouvrir_enregistrer) {
+		boolean bf1 = true;
+		//String chaine="", ligne="";
+		String tmp1="", tmp2="";
+		String sep = ""+File.separatorChar;
+		JFileChooser dialogue = null;
+		FileDialog fDial = null;
+
+		if (ouvrir_enregistrer) {
+			File chosen_file=null;
+			// création de la boîte de dialogue
+			if (bf1) dialogue = new JFileChooser();
+			//else fDial = new FileDialog(f2, "Ouvrir", FileDialog.LOAD);
+			
+			// affichage
+			if (bf1) dialogue.showOpenDialog(null);
+			else fDial.setVisible(true);
+			
+			// récupération du fichier sélectionné
+			if (bf1) chosen_file = dialogue.getSelectedFile();
+			else {
+				tmp1 = fDial.getFile();
+				if (tmp1!=null) tmp2 = fDial.getDirectory();
+				chosen_file = new File(tmp2+sep+tmp1);
+			}
+			//aff("chosen_file = "+chosen_file);
+			return ""+chosen_file;
+		}
+		else {
+			File chosen_file = null;
+			// création de la boîte de dialogue d'enregistrement d'un fichier
+			JFileChooser dialogue2 = new JFileChooser();
+				//dialogue2.setSelectedFile(f);
+			// affichage de la boîte de dialogue2
+			dialogue2.showSaveDialog(null);
+
+			// récupération du fichier sélectionné par l'utilisateur
+			chosen_file = dialogue2.getSelectedFile();
+			//f2.setFichier_ouvert(chosen_file);
+			//aff("Fichier choisi : " + chosen_file);
+			return ""+chosen_file;
+		}
+	}
+	
+	/**
+		Permet d'ouvrir le fichier en fonction du mode d'ouverture passer 
+		en paramètre en prenant en compte le mode d'ouverture (r ou w).
+
+		@param mode
+	**/
+	private void ouvrir () {
+		try {
+			if (this.mode=='r')
+				lire_fichier = new BufferedReader(new FileReader(file));
+			else if (this.mode=='w') {
+				if (!file.exists()) {
+					file.createNewFile();
+				}
+				ecrire_fichier = new BufferedWriter(new FileWriter(file));
+			}
+			else
+				aff("le mode de lecture du fichier incorecte! ");	
+		}
+		catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	/**
+		Lit dans le fichier ouvert.
+	**/
+	public String lire () {
+		String res = "", buffer ="";
+		if (lire_fichier==null) {
+			return "";
+		}
+		try {
+			do {
+				buffer = lire_fichier.readLine();
+				if (buffer!=null)
+					res+=buffer+"\n";
+			}
+			while (buffer!=null);
+		}
+		catch (IOException e) {
+			e.printStackTrace();
+		}
+		return res;
+	}
+
+	/**
+		Ecrit dans le fichier.
+		@param s0, flush
+	**/
+	public boolean ecrire (String s0, boolean flush) {
+		if (s0==null) {
+			aff("Attention, le buffer et null");
+			return false;
+		}
+		if (s0.isEmpty()) {
+			aff("Attention, le buffer et vide");
+			return false;
+		}
+		// Gestion des erreurs
+
+		try {
+			ecrire_fichier.write(s0, 0, s0.length());
+			if (!flush) return true;
+		}
+		catch (IOException e) {
+			e.printStackTrace();
+			return false;
+		}
+		try {
+			ecrire_fichier.flush();
+			return true;
+		}
+		catch (IOException e) {
+			e.printStackTrace();
+			return false;
+		}
+	}
+
+	/**
+		Ferme le fichier ouvert.
+	**/
+	public boolean fermer () {
+		String error = "Impossible de fermer le fichier a l'adresse"+nom_du_fichier;
+		if (this.mode=='r') {
+			try {
+				lire_fichier.close();
+				return true;
+			}
+			catch (IOException e) {
+				aff(error);
+				e.printStackTrace();
+				return false;
+			}
+		}
+		else if (this.mode=='w') {
+			try {
+				ecrire_fichier.close();
+				return true;
+			}
+			catch (IOException e) {
+				
+				aff(error);
+				e.printStackTrace();
+				return false;
+			}
+		}
+		else return false;
+	}
+
+// ######################### Getteurs et setteurs ############################ //
+
+	public String getNom_du_fichier () {
+		return nom_du_fichier;
+	}
+	
+// ######################## Fonctions utilitaires ############################ //
+
+	public void aff (String s1) {
+		System.out.println(s1);
+	}
+
+	public void affnn (String s1) {
+		System.out.print(s1);
+	}
+}
+
+
+# ./src/Main.java
+
+import java.io.IOException;
+
+class Main {
+	private Jeu jeu = null;
+	private String [] args = null;
+	private boolean jeu_non_graphique = false;
+	private boolean choix_pions_auto = false;
+	private boolean mode_triche = false;
+	private LectureEcriture le = null;
+
+	public void lance_jeu () {
+		jeu();
+		while (jeu_non_graphique) jeu();
+	}
+
+	public void jeu () {
+		int q1 = 0, q2=0, q3=0, haut_bas = 0;
+		Menu_non_graphique menu = new Menu_non_graphique();
+		q1 = menu.menu_principal();
+		if (q1==1) {
+			aff("");
+			q2 = menu.menu_nouveau_jeu();
+			mode_triche = false;
+			if (q2!=3) {
+				aff("");
+				q3 =  menu.menu_mode_triche();
+				if (q3!=2) mode_triche = true;
+			}
+			if (q2==1) {
+				aff("");
+				haut_bas = menu.menu_haut_bas();
+				aff("");
+				if (haut_bas==1) {
+					jeu = new Jeu(this, true, false, 
+					jeu_non_graphique, mode_triche, 
+					choix_pions_auto);
+				}				
+				else {
+					jeu = new Jeu(this, false, true, 
+					jeu_non_graphique, mode_triche, 
+					choix_pions_auto);
+				}
+			}
+			if (q2==2) {
+				aff("Le joueur 1 est en haut "+
+				"et le joueur 2 est en bas.");
+				
+				jeu = new Jeu(this, true, true,
+				jeu_non_graphique, mode_triche, 
+				choix_pions_auto);
+			}
+			if (q2==3) {
+				jeu = new Jeu(this, false, false,
+				jeu_non_graphique, true, 
+				choix_pions_auto);
+			}
+			if (jeu_non_graphique) jeu_non_graphique();
+		}
+		if (q1==2) {
+			relecture();
+		}
+		if (q1==3) {
+			System.exit(0);
+		}
+		aff("\n\n");
+	}
+
+	public void jeu_non_graphique () {
+		if (jeu!=null) {
+			int res = jeu.jeu_non_graphique();
+			if (res!=0) jeu.fin_du_jeu(res);
+		}
+		else {
+			aff("Erreur : le jeu est null");
+		}
+	}
+
+	public void relecture () {
+		Fenetre ftmp = null;
+		Relecture relecture = null;
+		try {
+			le = new LectureEcriture('r');
+		}
+		catch (IOException e) {
+			aff(e.getMessage());
+			return;
+		}
+		if (jeu!=null)
+		if (!jeu.getJeu_non_graphique())
+		ftmp = jeu.getFenetre();
+		try {
+			relecture = new Relecture (this);
+			jeu = relecture.relire(le.getNom_du_fichier());
+		}
+		catch (GameLoadingException e) {
+			aff(e.getMessage());
+			return;
+		}
+
+		if (jeu.getJeu_non_graphique()) {
+			jeu_non_graphique = true;
+			if (ftmp!=null) ftmp.dispose();
+		}
+		jeu_non_graphique();
+	}
+
+// ########################### Fonction main ################################# //
+
+	public static void main (String [] args) {
+		Main main = new Main();
+		main.initialise_main(main, args);
+	}
+
+// #################### Analyse des argmuents ################################ //
+
+	public boolean [] analyse_args (String [] args) {
+		if (args==null) return null;
+		boolean [] res = new boolean[2];
+		int i=0;
+		for (i=0; i<args.length; i++) {
+			if (args[i]!=null) {
+				if (args[i].contains("-choix_auto")
+				|| args[i].contains("-cha"))
+					res[0] = true;
+				if (args[i].contains("-jeu_non_graphique")
+				|| args[i].contains("-jng"))
+				res[1] = true;
+			}
+		}
+		return res;
+	}
+
+	/**
+		Initiliase les options en fonction des argmuments 
+		donnés en ligne de commande.
+	**/
+	public void initialise_options_args (String [] args) {
+		boolean [] tmp = analyse_args(args);
+		if (tmp[0]) choix_pions_auto = true;
+		if (tmp[1]) jeu_non_graphique = true;
+	}
+
+// ##################### Getteurs et setteurs ################################ //
+
+	public Jeu getJeu () {
+		return jeu;
+	}
+	public void setJeu (Jeu jeu) {
+		this.jeu = jeu;
+	}
+	public boolean getJeu_non_graphique () {
+		return jeu_non_graphique;
+	}
+	public void setJeu_non_graphique (boolean tmp) {
+		jeu_non_graphique = tmp;
+	}
+	public void setArgs (String [] tmp) {
+		args = tmp;
+	}
+	public String [] getArgs () {
+		return args;
+	}
+
+// ####################### Lancement du jeu ################################ //
+
+	public void initialise_main (String [] args) {
+		Main main = new Main();
+		initialise_main(main, args);
+	}
+
+	public void initialise_main (Main main, String [] args) {
+		this.args = args;
+		if (args!=null) {	
+			main.initialise_options_args(args);
+		}
+		/// tmp pour le test ///
+		//main.setJeu_non_graphique(true);
+		/// ################ ///
+		main.lance_jeu();
+	}
+
+// ##################### Fonctions utilitaires ############################# //
+
+	public void aff (String s1) {
+		System.out.println(s1);
+	}
+
+	public void affnn (String s1) {
+		System.out.print(s1);
+	}
+}
+
+
+# ./src/Menu_non_graphique.java
+
+import java.util.Scanner;
+import java.util.ArrayList;
+
+public class Menu_non_graphique {
+	/**
+		Retourne -1 en cas d'erreur.
+	**/
+	public int menu (String nom, String message, 
+			ArrayList<ArrayList<String>> menu) {
+		int menu_size = menu.size();
+
+		if (menu==null) {
+			aff("Le tableau du menu est null");
+			return -1;
+		}
+		if (menu.size()==0) {
+			aff("Le tableau du menu est vide");
+			return -1;
+		}
+		for (int i=0; i<menu_size; i++) {
+			if (menu.get(i).size()!=2)  {
+				aff("Le tableau interne de la case "+i+
+				" n'a pas un taille de 2.");
+				return -1;
+			}
+			if (!isInteger(menu.get(i).get(1)))  {
+				aff("Le tableau interne de la case "+i+
+				" ne contient pas un entier en case 1.");
+				return -1;
+			}
+		}// On vérifie que le tableau contient bien ce que l'on veut : 
+		// des String dans les cases menu.get(i).get(0)
+		// et des int dans les cases menu.get(i).get(1).
+
+		if (!nom.isEmpty()) nom+=" ";
+		int cmp=0, res = -1;
+		while (res<1 || res>menu_size) {
+			if (cmp%10==0) {
+				if (cmp!=0) aff("");
+				if (!nom.isEmpty())
+					aff("Menu "+nom+":");
+				if (message.isEmpty()) aff("");
+				if (!message.isEmpty())
+					aff(message+"\n");
+				for (int i=0; i<menu_size; i++) {
+					aff((i+1)+" : "+menu.get(i).get(0));
+				}
+			}
+			res = entrer_entier();
+			cmp++;
+		}
+		res--;
+		return (Integer.parseInt(menu.get(res).get(1)));
+	}
+
+	public int menu (String nom, ArrayList<ArrayList<String>> menu) {
+		return menu(nom, "", menu);
+	}
+
+// ################### Fonctions utilitaires ################################## //
+
+	public void aff (String s1) {
+		System.out.println(s1);
+	}
+
+	public void affnn (String s1) {
+		System.out.print(s1);
+	}
+
+	public boolean isInteger (String n0) {
+		try {
+			int n1 = Integer.parseInt(n0);
+			return true;
+		}
+		catch (Exception e) {
+			return false;
+		}
+	}
+
+	public int entrer_entier () {
+		affnn("? = ");
+		Scanner sc = new Scanner(System.in);
+		String res = "";
+
+		res = sc.nextLine();
+		while (!isInteger(res)) {
+			aff("Veuillez entrer en entier : ");
+			affnn("? = ");
+			res = sc.nextLine();
+		}
+
+		return Integer.parseInt(res);
+	}
+
+// ##################### Génération du menu ################################## //
+
+	public int menu_principal () {
+		ArrayList<ArrayList<String>> menuL = 
+			new ArrayList<ArrayList<String>>();
+		ArrayList<String> tmp = new ArrayList<>();
+		tmp.add("Nouveau jeu");
+		tmp.add("1");
+		menuL.add(tmp);
+		tmp = new ArrayList<>();
+		tmp.add("Ouvrir une partie sauvegardee");
+		tmp.add("2");
+		menuL.add(tmp);
+		tmp = new ArrayList<>();
+		tmp.add("Quitter");
+		tmp.add("3");
+		menuL.add(tmp);
+		return menu("principal", menuL);
+	}	
+
+	public int menu_nouveau_jeu () {
+		ArrayList<ArrayList<String>> menuL = 
+			new ArrayList<ArrayList<String>>();
+		ArrayList<String> tmp = new ArrayList<>();
+		tmp.add("Jeu solo");
+		tmp.add("1");
+		menuL.add(tmp);
+		tmp = new ArrayList<>();
+		tmp.add("Jeu deux joueurs");
+		tmp.add("2");
+		menuL.add(tmp);
+		tmp = new ArrayList<>();
+		tmp.add("Voir l'ordinateur s'affronter lui-meme "+
+		"(niveau aleatoire)");
+		tmp.add("3");
+		menuL.add(tmp);
+		return menu("nouveau jeu", menuL);
+	}
+
+	public int menu_haut_bas () {
+		ArrayList<ArrayList<String>> menuL = 
+			new ArrayList<ArrayList<String>>();
+		ArrayList<String> tmp = new ArrayList<>();
+		tmp.add("En haut du plateau");
+		tmp.add("1");
+		menuL.add(tmp);
+		tmp = new ArrayList<>();
+		tmp.add("En bas du plateau");
+		tmp.add("2");
+		menuL.add(tmp);
+		return menu("", "Voulez-vous etre situe : ", menuL);
+	}
+
+	public int menu_tour_de_jeu () {
+		ArrayList<ArrayList<String>> menuL = 
+			new ArrayList<ArrayList<String>>();
+		ArrayList<String> tmp = new ArrayList<>();
+		tmp.add("Jouer");
+		tmp.add("1");
+		menuL.add(tmp);
+		tmp = new ArrayList<>();
+		tmp.add("Sauvegarder la partie");
+		tmp.add("2");
+		menuL.add(tmp);
+		tmp = new ArrayList<>();
+		tmp.add("Quitter la partie");
+		tmp.add("3");
+		menuL.add(tmp);
+		return menu("", "Voulez-vous : ", menuL);
+	}
+
+	public int menu_mode_triche () {
+		ArrayList<ArrayList<String>> menuL = 
+			new ArrayList<ArrayList<String>>();
+		ArrayList<String> tmp = new ArrayList<>();
+		tmp.add("Non");
+		tmp.add("2");
+		menuL.add(tmp);
+		tmp = new ArrayList<>();
+		tmp.add("Oui");
+		tmp.add("1");
+		menuL.add(tmp);
+		return menu("", "Voulez-vous activer le mode triche ?", menuL);
+	}
+}
+
+# ./src/Mouvements.java
+
+import java.util.List;
+import java.util.ArrayList;
+
+public class Mouvements extends Plateau {
+	Plateau plateauP;
+	CaseNonGraphique [][] plateau;
+
+	public Mouvements (Plateau plateau) {
+		plateauP = plateau;
+		this.plateau = plateauP.getPlateau();
+	}
+
+// #################### Calcul des mouvements possibles ##################### //
+
+	/**
+		Retourne un tableau de booléens.
+		@see Mouvements#cases_possibles
+	**/
+	public boolean [] teste_case (int i, int j, boolean joueur1_2) {
+		boolean [] res = new boolean[4];
+
+		if (i<0 || i>plateau.length || j<0 || j>plateau[0].length)
+			return res;
+		// #### Gauche #### //
+		if (!(j-1<0)) {
+			if (!plateau[i][j-1].fantome_joueur_present(joueur1_2))
+				res[0] = true;
+		}
+
+		// #### Droite ##### //
+		if (!(j+1>=plateau[0].length)) {
+			if (!plateau[i][j+1].fantome_joueur_present(joueur1_2))
+				res[1] = true;
+		}
+
+		// #### Bas #### //
+		if (!(i+1>=plateau.length)) {
+			if (!plateau[i+1][j].
+				fantome_joueur_present(joueur1_2)) 
+					res[2] = true;
+		}
+
+		// #### Haut #### //
+		if (!(i-1<0)) {
+			if (!plateau[i-1][j].
+				fantome_joueur_present(joueur1_2)) 
+					res[3] = true;
+		}
+
+		return res;
+	}
+
+	/**
+		boolean [] cases_possibles[4] : <br>
+			cases_possibles[0] : gauche <br>
+			cases_possibles[1] : droite <br>
+			cases_possibles[2] : bas <br>
+			cases_possibles[3] : haut
+	**/
+	public ArrayList<String> cases_possibles (String position, 
+			boolean joueur1_2) {
+		ArrayList<String> res = new ArrayList<String>();
+		int [] tmp1 = ConvertString_Coordonnees(position);
+		int ii = tmp1[0];
+		int jj = tmp1[1];
+		boolean [] cases_possibles = teste_case(ii, jj, joueur1_2);
+
+		if (cases_possibles[0]) 
+			res.add(ConvertCoordonnees_String(ii, jj-1));
+		if (cases_possibles[1]) 
+			res.add(ConvertCoordonnees_String(ii, jj+1));
+		if (cases_possibles[2]) 
+			res.add(ConvertCoordonnees_String(ii+1, jj));
+		if (cases_possibles[3]) 
+			res.add(ConvertCoordonnees_String(ii-1, jj));
+		return res;
+	}
+
+// ################### Fonctions utilitaires ################################# //
+
+	public void aff (String s1) {
+		System.out.println(s1);
+	}
+
+	public void affnn (String s1) {
+		System.out.print(s1);
+	}
+
+	public void afftab (Object [] tab, String nom) {
+		for (int i=0; i<tab.length; i++) {
+			aff(nom+"["+i+"] = "+tab[i]);
+		}
+	}
+
+	public void afftab (Object [] tab) {
+		for (int i=0; i<tab.length; i++) {
+			aff("tab["+i+"] = "+tab[i]);
+		}
+	}
+
+	public void setPlateau (Plateau plateau) {
+		plateauP = plateau;
+		this.plateau = plateau.getPlateau();
+	}
+}
+
+
+# ./src/NullPositionException.java
+
+class NullPositionException extends RuntimeException {
+	public NullPositionException () {
+		super("Aucune position possible.");
+	}
+}
+
+# ./src/Plateau.java
+
+import java.util.Scanner;
+import java.util.List;
+import java.util.ArrayList;
+
+
+class Plateau {
+	private CaseNonGraphique [][] plateau;
+	private int longueur;
+	private int hauteur;
+	private int nbr_pions_par_joueurs;
+	private String coup_joue;
+
+	public Plateau () {
+		this.longueur = 6;
+		this.hauteur = 6;
+		this.nbr_pions_par_joueurs = 8;
+		genere_plateau();
+	}
+
+	public Plateau (int longueur, int hauteur) 
+			throws BoardGenerationException {
+		if (longueur<1 || longueur>26) {
+			throw new BoardGenerationException("Impossible "
+			+"de generer un plateau de plus de 26 cases de "
+			+"longueur.");
+		}
+		if (hauteur<4) {
+			throw new BoardGenerationException("Impossible "
+			+"de generer un plateau de moins de 4 lignes de "
+			+"hauteur, \ncar chaque joueur dispose de deux "
+			+"lignes de fantomes.");
+		}
+		this.longueur = longueur;
+		this.hauteur = hauteur;
+		this.nbr_pions_par_joueurs = 2*(longueur-2);
+		genere_plateau();
+	}
+
+// ########################## Generation du plateau ########################## //
+
+	public void genere_plateau () {
+		int i, j;
+
+		plateau = new CaseNonGraphique [hauteur][];
+		for (i=0; i<plateau.length; i++) {
+			plateau[i] = new CaseNonGraphique[longueur];
+		}
+		for (i=0; i<plateau.length; i++) {
+			for (j=0; j<plateau[i].length; j++) {
+				plateau[i][j] = new CaseNonGraphique();
+			}
+		}
+		// ###### Initialisation des cases de sortie ################ //
+		plateau[0][0].setCase_sortie(true, false);
+		plateau[0][plateau[0].length-1].setCase_sortie(true, false);
+		plateau[plateau.length-1][0].setCase_sortie(true, true);
+		plateau[plateau.length-1][plateau[plateau.length-1]
+				.length-1].setCase_sortie(true, true);
+	}
+
+// ####################### Déplacements de fantômes ######################## //
+
+	/**
+		Effectue le deplacement d'un fantôme entre la 
+		position 1 et la position 2.
+	**/
+	public void deplace_fantome (String position1, String position2) {
+		int [] tmpCaseInitiale = ConvertString_Coordonnees(position1);
+		int [] tmpCaseFinale = ConvertString_Coordonnees(position2);
+		plateau[tmpCaseFinale[0]][tmpCaseFinale[1]].
+		place_fantome(plateau[tmpCaseInitiale[0]][tmpCaseInitiale[1]]
+		.getGhost());
+		plateau[tmpCaseInitiale[0]][tmpCaseInitiale[1]].
+		retire_fantome();
+		coup_joue=position1+" , "+position2;
+
+		CaseNonGraphique caseInit = plateau[tmpCaseInitiale[0]][tmpCaseInitiale[1]];
+		CaseNonGraphique caseFin = plateau[tmpCaseFinale[0]][tmpCaseFinale[1]];
+
+		/**aff("");
+		if (caseInit.getCase_sortie()) {
+			aff("Case initiale");
+			caseInit.affiche_info();
+		}
+		if (caseFin.getCase_sortie()) {
+			aff("Case finale");
+			caseFin.affiche_info();
+		}**/
+	}
+
+// ####################### Entre une case ################################### //
+
+	public String Entre_une_case_aux (ArrayList<String> positions_possibles, 
+			boolean initial) throws NullPositionException {
+		if (positions_possibles.isEmpty()) 
+			throw new NullPositionException();
+		Scanner sc = new Scanner(System.in);
+		if (initial) aff("\nChoisissez l'une des cases restantes : ");
+		else {
+			affnn("Entrez les coordonees d'un pion de ce joueur");
+			aff(" parmi les coordonees suivantes : ");
+		}
+		int tmp0=0;
+		for (String s0 : positions_possibles) {
+			affnn(s0);
+			if (tmp0<positions_possibles.size()-1)
+				affnn(", ");
+			tmp0++;
+		}
+		affnn(" : \n? = ");
+		return (sc.nextLine());
+	}
+
+	/**
+		Permet à l'utilisateur d'entrer un case en fonction
+		du tableau de cases possibles passé en paramètres.
+	**/
+	public String Entre_une_case (ArrayList<String> positions_possibles, 
+			boolean retire, boolean initial) 
+			throws NullPositionException {
+		if (positions_possibles.isEmpty()) 
+			throw new NullPositionException();
+		Scanner sc = new Scanner(System.in);
+		String rep="";
+		boolean ok=false;
+		while (!ok) {
+			rep = Entre_une_case_aux(positions_possibles, initial);
+			if (positions_possibles.contains(rep)) {
+				if (retire) positions_possibles.remove(rep);
+				ok=true;
+			}
+		}
+		return rep;
+	}
+
+	public String Entre_une_case (ArrayList<String> positions_possibles, 
+			boolean initial) {
+		return Entre_une_case(positions_possibles, true, initial);
+	}
+
+	public String entre_case_ordi (ArrayList<String> positions_possibles) {
+		if (positions_possibles==null) return "";
+		if (positions_possibles.isEmpty()) return "";
+		int tmp = randInt(0, positions_possibles.size()-1);
+		return positions_possibles.get(tmp);
+	}
+
+// ############################# Mode triche ################################ //
+
+	public void mode_triche_active (Jeu jeu) {
+		ArrayList<String> AL1;
+		AL1 = getCoordonnes_pions(jeu.getJoueur(true));
+		for (String s1 : AL1) {
+			getCase(s1).setFantome_visible(true);
+		}
+		AL1 = getCoordonnes_pions(jeu.getJoueur(false));
+		for (String s1 : AL1) {
+			getCase(s1).setFantome_visible(true);
+		}
+	}
+
+	public void mode_triche_desactive (Jeu jeu, Joueur joueur) {
+		ArrayList<String> AL1;
+		AL1 = getCoordonnes_pions(joueur);
+		for (String s1 : AL1) {
+			getCase(s1).setFantome_visible(true);
+		}
+		AL1 = getCoordonnes_pions(jeu.getJoueur(!joueur.getJoueur1_2()));
+		for (String s1 : AL1) {
+			getCase(s1).setFantome_visible(false);
+		}
+	}
+
+// ######################### Fonctions toString ############################# //
+
+	public String toString () {
+		int i,j;
+		String res="";
+
+		res+="\n   ";
+		for (i=0; i<plateau[0].length; i++) {
+			res+="  "+(char)('A'+i)+"    ";
+		}
+		res+="\n\n";
+		for (i=0; i<plateau.length; i++) {
+			res+=""+(plateau.length-i)+"  ";
+			for(j=0; j<plateau[i].length; j++) {
+				res+=plateau[i][j]+"  ";
+			}
+			if (i<plateau.length-1) res+="\n\n";
+		}
+		res+="\n\n";
+
+		return res;
+	}
+
+// ######################## Getteurs et Setteurs ########################### //
+
+	public int getLongueur () {
+		return longueur;
+	}
+	public int getHauteur () {
+		return hauteur;
+	}
+	public int getNbr_pions_par_joueurs () {
+		return nbr_pions_par_joueurs;
+	}
+	public CaseNonGraphique [][] getPlateau () {
+		return plateau;
+	}
+	public String getCoup_joue(){
+		return coup_joue;
+	}
+	public void setPlateau (CaseNonGraphique[][] plateau) {
+		this.plateau = plateau;
+	}
+	public Plateau clone() {
+		return this;
+	}
+	/*public void setCase (CaseNonGraphique case, int i, int j) {
+		if (i<0 || i>=hauteur) return null;
+		if (j<0 || j>=longueur) return null;
+		plateau[i][j] = case;
+	}*/
+	public CaseNonGraphique getCase (int i, int j) {
+		if (i<0 || i>=hauteur) return null;
+		if (j<0 || j>=longueur) return null;
+		return plateau[i][j];
+	}
+	public CaseNonGraphique getCase (String case1) {
+		int [] tmp = ConvertString_Coordonnees(case1);
+		if (tmp==null) return null;
+		if (tmp.length!=2) return null;
+		int i = tmp[0], j = tmp[1];
+		if (i<0 || i>=plateau.length 
+			|| j<0 || j>=plateau[0].length) 
+				return null;
+		return getCase(i, j);
+	}
+	public void setMode_triche (Jeu jeu, boolean mode_triche_tmp) {
+		if (mode_triche_tmp)
+			mode_triche_active(jeu);
+	}
+
+// ######################## Fonctions utilitaires ######################### //
+
+	public ArrayList<String> getCoordonnes_pions (Joueur jtmp) {
+		ArrayList<String> res = new ArrayList<String>();
+		boolean j1_2 = jtmp.getJoueur1_2();
+
+		for (int i=0; i<plateau.length; i++) {
+			for (int j=0; j<plateau[i].length; j++) {
+				CaseNonGraphique tmpC = plateau[i][j];
+				if (tmpC.fantome_present() &&
+					tmpC.getJoueur1_2()==j1_2) {
+					res.add(""+convert_colonne_lettre(j)+
+						convert_chiffre_ligne(i));
+				}
+			}
+		}
+		return res;
+	}
+
+	/**
+		Supprime tou les fantômes du plateau.
+	**/
+	public void clear () {
+		for (int i=0; i<plateau.length; i++) {
+			for (int j=0; j<plateau[i].length; j++) {
+				plateau[i][j].retire_fantome();
+			}
+		}
+	}
+
+	public void aff (String s1) {
+		System.out.println(s1);
+	}
+
+	public void affnn (String s1) {
+		System.out.print(s1);
+	}
+
+// #*************** Fonctions utiles pour le plateau initial ****************# //
+
+	/**
+		Convertit une ligne en numéro de case dans le plateau ou le 
+		contraire (opération d'inversion).
+	**/
+	public int convert_chiffre_ligne (int n1) {
+		CaseNonGraphique [][] plateau = getPlateau();
+		return plateau.length-n1;
+	}
+
+	public char convert_colonne_lettre (int n0) {
+		return (char)('a'+n0);
+	}
+
+	public int convert_lettre_colonne (char cc) {
+		CaseNonGraphique [][] plateau = getPlateau();
+		char aa = 'a';
+		for (int i=0; i<plateau.length; i++) {
+			if (aa==cc) {
+				return i;
+			}
+			aa++;
+		}
+		return -1;
+	}
+
+	public String ConvertCoordonnees_String (int i, int j) {
+		return (""+convert_colonne_lettre(j)+
+				convert_chiffre_ligne(i));
+	}
+
+	public int [] ConvertString_Coordonnees (String position) {
+		int [] res = new int[2];
+		res[0] = convert_chiffre_ligne(
+				Integer.parseInt(position.substring(1, 
+					position.length())));
+		res[1] = convert_lettre_colonne(position.charAt(0));
+
+		return res;
+	}
+
+	public static int randInt (int min, int max) {
+		int res = (int)(Math.random()*max)+min;
+		if (res>max) res = max;
+		if (res<min) res = min;
+
+		return res;
+	}
+}
+
+
+# ./src/Plateau_initial.java
+
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Scanner;
+
+class Plateau_initial extends Plateau {
+	Joueur joueur;
+	int nbr_bon_fantomes = 0;
+	int nbr_mauvais_fantomes = 0;
+	boolean fantome_plus=true;
+
+	public Plateau_initial (CaseNonGraphique [][] plateau, Joueur jtmp,
+			boolean choix_pions_auto) {
+		joueur = jtmp;
+		fantome_plus = randboolean();
+		setPlateau(plateau);
+		if (choix_pions_auto) place_fantomes(false);
+		else place_fantomes(joueur.getJoueur_humain_ordinateur());
+	}
+
+// ################## Positions initialles ################################### //
+
+	/**
+		Retourne un ArrayList des positions possibles selon le joueur : 
+	
+		j1 : b6-e5
+		j2 : b2-e1
+	**/
+	public ArrayList<String> positions_possibles () {
+		ArrayList<String> res = new ArrayList<String>();
+		char i='b';
+		int j=0;
+		CaseNonGraphique [][] plateau = getPlateau();
+		boolean j1_j2 = getJoueur1_2();
+
+		if (j1_j2) {
+			for (i='b'; i<'f'; i++) {
+				for (j=6; j>4; j--) {
+					res.add(""+(char)(i)+""+j);
+				}
+			}
+		}
+		else {
+			for (i='b'; i<'f'; i++) {
+				for (j=2; j>0; j--) {
+					res.add(""+(char)(i)+""+j);
+				}
+			}
+		}
+
+		/*for (String s : res) {
+			aff(s);
+		}*/
+
+		return res;
+	}
+
+// ################# Sauvegarde des couops initiaux ######################### //
+	
+	public String[] sauve_coups_initiaux (Plateau plateauP) {
+		int i,j;
+		String [] res = new String[2];
+		CaseNonGraphique [][] plateau = plateauP.getPlateau();
+		String tmp = "";
+		char tmpC = '0';
+		
+		for (i=0; i<2; i++){
+			for (j=1; j<plateau[i].length-1; j++) {
+				tmp+=""+code_fatome(plateau[i][j]);
+				if (j<plateau[i].length-2) tmp+=" ";
+			}
+			if (i<2-1) tmp+="\n";
+		}
+		res[0] = tmp;
+		tmp="";
+		for (i=plateau.length-2; i<plateau.length; i++){
+			for (j=1; j<plateau[i].length-1; j++) {
+				tmp+=""+code_fatome(plateau[i][j]);
+				if (j<plateau[i].length-2) tmp+=" ";
+			}
+			if (i<plateau.length-1) tmp+="\n";
+		}
+		res[1] = tmp;
+
+		return res;
+	}
+
+// ###################### Choisis fantôme ################################### //
+
+	/**
+		@see Plateau_initial#choisis_fantome
+	**/
+	public boolean choisis_fantome_humain () {
+		int res=0;
+		while (res<1 || res>2) {
+			aff("Le fantome est :\n1 : bon\n2 : mauvais");
+			res = entrer_entier();
+		}
+		return ((res==1)?true:false);
+	}
+
+	/**
+		@see Plateau_initial#choisis_fantome
+	**/
+	public boolean choisis_fantome_ordi () {
+		return randboolean();
+	}
+
+	/**
+		ordi_humain:<br>
+			true : humain<br>
+			false : ordinateur<br><br>
+
+		Retourne un boolean qui détermine <br>
+		si le fantome est bon ou mauvais : <br>
+			true : bon<br>
+			false : mauvais<br><br>
+
+		S'il reste un fantome à placer et
+		que le nombre de fantome max est impair, 
+		la nature du fantôme est attribuée aléatoirement 
+		(la valeur sera la même pour les deux joueurs par 
+		soucis d'égalité).
+	**/
+	public boolean choisis_fantome_aux (boolean ordi_humain) {
+		int nbppj = super.getNbr_pions_par_joueurs();
+		if (nbppj%2!=0) {
+			if (nbr_bon_fantomes==nbppj
+				&& nbr_mauvais_fantomes==nbppj/2-1)
+			return false;
+			if (nbr_mauvais_fantomes==nbppj
+				&& nbr_bon_fantomes==nbppj/2-1)
+			return true;
+		}
+		else {
+			if (nbr_bon_fantomes==nbppj/2)
+				return false;
+			if (nbr_mauvais_fantomes==nbppj/2)
+				return true;
+		}
+
+		if (ordi_humain) return choisis_fantome_humain();
+		else {
+			return choisis_fantome_ordi();
+		}
+	}
+
+	public boolean choisis_fantome (boolean ordi_humain) {
+		boolean res = choisis_fantome_aux(ordi_humain);
+		if (res) nbr_bon_fantomes++;
+		else nbr_mauvais_fantomes++;
+
+		return res;
+	}
+
+// ############################ Place fanôme ################################## //
+
+	/**
+		ordi_humain:
+			true : humain
+			false : ordinateur
+	**/
+	public void place_fantomes (boolean ordi_humain) {
+		if (ordi_humain) {
+			aff("C'est a "+joueur+" de placer ses fantomes :");
+			place_fantomes_humain();
+		}
+		else {
+			place_fantomes_ordi();
+			aff("Le joueur "+joueur+" a place ses fantomes.");
+		}
+		joueur.setNbr_fantomes_bons(nbr_bon_fantomes);
+		joueur.setNbr_fantomes_mauvais(nbr_mauvais_fantomes);
+	}
+
+	public void place_fantomes_ordi () {
+		CaseNonGraphique [][] plateau = super.getPlateau();
+		ArrayList<String> positions_possibles = positions_possibles();
+
+		for (String position : positions_possibles) {
+			int [] tmp1 = ConvertString_Coordonnees(position);
+			int ii = tmp1[0];
+			int jj = tmp1[1];
+			boolean btmp = choisis_fantome(false);
+			Ghost ghosttmp = new Ghost (joueur, btmp);
+			if (jj!=-1) plateau[ii][jj].ajoute_fantome(ghosttmp);	
+		}
+	}
+
+	public void place_fantomes_humain () {
+		int i;
+		CaseNonGraphique [][] plateau = super.getPlateau();
+		ArrayList<String> positions_possibles = positions_possibles();
+		int places = positions_possibles.size();
+
+		for (i=0; i<places; i++) {
+			String position = 
+				super.Entre_une_case(positions_possibles, true);
+			int [] tmp1 = ConvertString_Coordonnees(position);
+			int ii = tmp1[0];
+			int jj = tmp1[1];
+			boolean btmp = choisis_fantome(true);
+			Ghost ghosttmp = new Ghost (joueur, btmp);
+			if (jj!=-1) plateau[ii][jj].ajoute_fantome(ghosttmp);
+		}
+	}
+	
+// ######################## Getteurs et Setteurs ########################### //
+
+	public boolean getJoueur1_2 () {
+		return joueur.getJoueur1_2();
+	}
+	public int getNbr_bon_fantomes () {
+		return nbr_bon_fantomes;
+	}
+	public int getNbr_mauvais_fantomes () {
+		return nbr_mauvais_fantomes;
+	}
+	public int getNbr_fantomes () {
+		return nbr_bon_fantomes+nbr_mauvais_fantomes;
+	}
+	public CaseNonGraphique[][] getPlateau () {
+		return super.getPlateau();
+	}
+
+	public void setPlateau (CaseNonGraphique[][] plateau) {
+		super.setPlateau(plateau);
+	}
+
+
+// ##################### Fonctions utilitaires ############################# //
+
+	public void aff (String s1) {
+		System.out.println(s1);
+	}
+
+	public void affnn (String s1) {
+		System.out.print(s1);
+	}
+
+	/**
+		Returns true if s1 is an Integer.
+		Manages the case where s1 is empty.
+	**/
+	public boolean isInteger (String s1) {
+		try {
+			Integer.parseInt(s1);
+			return true;
+		}
+		catch (NumberFormatException e) {
+			return false;
+		}
+	}
+
+	public int entrer_entier () {
+		affnn("? = ");
+		Scanner sc = new Scanner(System.in);
+		String res = "";
+
+		res = sc.nextLine();
+		while (!isInteger(res)) {
+			aff("Veuillez entrer en entier : ");
+			affnn("? = ");
+			res = sc.nextLine();
+		}
+
+		return Integer.parseInt(res);
+	}
+
+	public static boolean randboolean () {
+		int tmp = randInt(0, 49);
+		return ((tmp<25)?true:false);
+	}
+
+	public static int randInt (int min, int max) {
+		int res = (int)(Math.random()*max)+min;
+		if (res>max) res = max;
+		if (res<min) res = min;
+
+		return res;
+	}
+
+// ##***************** Fonctions utilitaires spécialisées ****************## //
+
+	public char code_fatome (CaseNonGraphique case0) {
+		Ghost g1 = case0.getGhost();
+		if (g1==null) return 'N';
+		if (g1.getBon_mauvais()) return 'G';
+		else return 'B';
+	}
+}
+
+# ./src/Relecture.java
+
+import java.io.IOException;
+import java.util.ArrayList;
+
+public class Relecture {
+	private String erreur_fic_incorrectS = "Le fichier de sauvegarde est incorrect";
+	private String erreur_coup_incorrect = "Erreur : le coup est incorrect";
+	private Main main = null;
+
+	public Relecture (Main main) {
+		this.main = main;
+	}
+
+	public Jeu relire (String nom_fichier) {
+		return relire(nom_fichier, true);
+	}
+
+	/**
+		Relire les coups du jeu dans le fichier nom_fichier <br>
+		@param nom_fichier, coups
+		@see Relecture#relire(String)
+	**/
+	public Jeu relire (String nom_fichier, boolean affiche_info) 
+			throws GameLoadingException  {
+		int i,j,k, cmp=0, nbr_lignes_min = 0, commence_analyse = 0;
+		String typeJeu = "";
+		ArrayList<String> tmpAL=null, tmpAL2=null;
+		Jeu jeu = null;
+		Joueur joueur = null;
+		String [] coups_tmp = null;
+		LectureEcriture le = null;
+
+		try {
+			le = new LectureEcriture(nom_fichier, 'r');
+		}
+		catch (IOException e) {
+			throw new GameLoadingException(e.getMessage());
+		}
+		String sauvegardeS = le.lire();
+		aff(sauvegardeS);
+		String [] sauv = sauvegardeS.split("\n");
+		sauv = nettoie_sauv(sauv);
+		if (sauv==null) 
+			throw new GameLoadingException(erreur_fic_incorrect(0, "sauv est null"));
+		if (sauv.length<1)
+			throw new GameLoadingException(erreur_fic_incorrect(0, "sauv.length<1"));
+		typeJeu = sauv[0];
+		nbr_lignes_min = 4;
+
+// ############## Initialisation du jeu restauré ############################ //
+
+		if (verifie_typeJeu(typeJeu)) {
+			//aff("type jeu = "+typeJeu);
+			nbr_lignes_min = 5;
+			commence_analyse = 1;
+			jeu = cree_jeu(typeJeu);
+		}
+		else {
+			jeu  = new Jeu(main, true, true, true, false, true);
+			// par défaut, on initialise la sauvegarde 
+			// a un jeu d'humain contre humain, non-graphique.
+			typeJeu = "";
+		}
+		Plateau plateau = jeu.getPlateau();
+		plateau.clear();
+		Mouvements mouv = jeu.getMouvements();
+		CaseNonGraphique [][] cases = plateau.getPlateau();
+
+// ########################################################################## //
+
+		if (sauv.length<nbr_lignes_min)
+			throw new GameLoadingException(erreur_fic_incorrect(0,
+			 "sauv.length<nbr_lignes_min : "+sauv.length+"<"+nbr_lignes_min));
+		String [] positions_joueurs = new String[4];
+		String ligne_tmp="";
+
+		j = 0;
+		for (i=commence_analyse; i<4+commence_analyse; i++) {
+			ligne_tmp = sauv[i].replace(" ", "");
+			if (!verifie_ligne(ligne_tmp))
+				throw new GameLoadingException(erreur_fic_incorrectS
+					+" a la ligne de sauvegarde "
+					+"des positions initiales "+(i+1)+" :\n"
+					+'"'+ligne_tmp+'"');
+			positions_joueurs[j] = ligne_tmp;
+			j++;
+		}
+
+		// relecture du plateau initial
+		for (i=0; i<2; i++) {
+			cmp=0;
+			for (j=1; j<cases[i].length-1; j++) {
+				cases[i][j].ajoute_fantome(fatome_code(
+					positions_joueurs[i].charAt(cmp), jeu.getJoueur(true)));
+
+				cmp++;
+			}
+
+		}
+		k=2;
+		for (i=cases.length-2; i<cases.length; i++) {
+			cmp=0;
+			for (j=1; j<cases[i].length-1; j++) {
+				cases[i][j].ajoute_fantome(fatome_code(
+					positions_joueurs[k].charAt(cmp), jeu.getJoueur(false)));
+				cmp++;
+			}
+			k++;
+		}
+
+		// relecture des coups
+		for (i=4+commence_analyse; i<sauv.length; i++) {
+			joueur = jeu.getJoueur(true);
+			if (affiche_info) {
+				jeu.affiche();
+				affiche_coup(coups_tmp, joueur);
+			}
+			coups_tmp = separe_coups(i, sauv[i], true);
+			if (coups_tmp!=null) {
+				tmpAL = plateau.getCoordonnes_pions(joueur);
+				if (tmpAL.contains(coups_tmp[0])) {
+					tmpAL2 = mouv.cases_possibles(coups_tmp[0], true);
+					if (tmpAL2.contains(coups_tmp[1])) {
+						plateau.deplace_fantome(coups_tmp[0], coups_tmp[1]);
+					}
+					else 
+						throw new GameLoadingException(
+							erreur_coup_incorrect(i, sauv[i], 
+							getCoup(i, sauv[i], true)));
+				}
+				else 
+					throw new GameLoadingException(
+						erreur_coup_incorrect(i, sauv[i], 
+						getCoup(i, sauv[i], true)));
+				jeu.ajoute_coup(true);
+				// joueur 1
+			}
+			joueur = jeu.getJoueur(false);
+			if (affiche_info) {
+				jeu.affiche();
+				affiche_coup(coups_tmp, joueur);
+			}
+			coups_tmp = separe_coups(i, sauv[i], false);
+			if (coups_tmp!=null) {
+				tmpAL = plateau.getCoordonnes_pions(joueur);
+				if (tmpAL.contains(coups_tmp[0])) {
+					tmpAL2 = mouv.cases_possibles(coups_tmp[0], false);
+					if (tmpAL2.contains(coups_tmp[1])) {
+						plateau.deplace_fantome(coups_tmp[0], coups_tmp[1]);
+					}
+					else 
+						throw new GameLoadingException(
+							erreur_coup_incorrect(i, sauv[i], 
+							getCoup(i, sauv[i], false)));
+				}
+				else 
+					throw new GameLoadingException(
+						erreur_coup_incorrect(i, sauv[i], 
+						getCoup(i, sauv[i], false)));
+				jeu.ajoute_coup(false);
+				jeu.incremente_numero_coup();
+				// joueur 2
+			}
+		}
+
+		if (!jeu.getJeu_non_graphique()) {
+			jeu.met_a_jour_plateau_graphique();
+		}
+		// si le jeu est graphique
+
+		return jeu;
+	}
+
+// ################### Fonctions utilitaires ################################# //
+
+	public void aff (String s1) {
+		System.out.println(s1);
+	}
+
+	public void affnn (String s1) {
+		System.out.print(s1);
+	}
+
+	public void affTab (String [] s1) {
+		affTab(s1, "");
+	}
+
+	public void affTab (String [] s1, String nom_tmp) {
+		String nom = nom_tmp;
+		if (nom_tmp.isEmpty()) nom = "s1";
+		for (int i=0; i<s1.length; i++) {
+			aff(nom+"["+i+"] = "+s1[i]);
+		}
+	}
+
+// ##***************** Fonctions utilitaires spécialisées *****************## //
+
+	public void affiche_coup (String [] coup_tmp, Joueur joueur) {
+		if (coup_tmp==null) return;
+		if (coup_tmp.length!=2) return;
+		aff("C'est a "+joueur+" de jouer :");
+		aff("Coup : "+coup_tmp[0]+" , "+coup_tmp[1]+" : ");
+	}
+
+	/**
+		Vérifie si la variable type jeu a le bon format : <br>
+			Joueur : <br>
+				H : humain <br>
+				C : ordinateur (computer) <br>
+			Jeu : <br>
+				G : graphique <br>
+				T : non graphique (terminal)
+	**/
+	public boolean verifie_typeJeu (String str) {
+		int i;
+
+		if (str==null) {
+			aff("verifie_typeJeu : str est null");
+			return false;
+		}
+		if (str.length()!=3) {
+			aff("verifie_typeJeu : str.length()!=3");
+			return false;
+		}
+		for (i=0; i<2; i++) {
+			if (str.charAt(i)!='H'
+			&& str.charAt(i)!='C')
+				return false;
+		}
+		if (str.charAt(2)!='G'
+		&& str.charAt(2)!='T') return false;
+		return true;
+	}
+
+	/**
+		Crée un jeu en fonction du type de jeu donné 
+		en argmument (chaîne de char).
+	**/
+	public Jeu cree_jeu (String str) {
+		if (!verifie_typeJeu(str)) {
+			aff("Impossible de creer le jeu car le str est invalide.");
+			return null;
+		}
+		boolean j1B = true;
+		if (str.charAt(0)=='C') j1B = false;
+		boolean j2B = true;
+		if (str.charAt(1)=='C') j2B = false;
+		boolean jeu_non_graphique = false;
+		if (str.charAt(2)=='T') jeu_non_graphique = true;
+		return new Jeu(main, j1B, j2B, jeu_non_graphique, false, true);
+	}
+
+	/**
+		Retourne un fantôme à partir du code fourni par l'énoncé 
+		pour la sauvegarde.
+	**/
+	public Ghost fatome_code (char c1, Joueur joueur) {
+		if (c1 !='G' && c1 != 'B')
+			return null;
+		boolean bon_mauvais = true;
+		if (c1=='B')
+			bon_mauvais = false;
+		Ghost res = new Ghost(joueur, bon_mauvais);
+		return res;
+	}
+
+	public String [] nettoie_sauv (String [] sauv) {
+		int i,j, cmp=0;
+		String [] res = null;
+
+		for (j=0; j<2; j++) {
+			cmp=0;
+			for (i=0; i<sauv.length; i++) {
+				if (sauv[i]!=null &&!sauv[i].isEmpty() 
+						&& !sauv[i].contains("#")) {
+					if (j==1) {
+						res[cmp] = sauv[i];
+					}
+					cmp++;
+
+				}
+			}
+			if (j==0) res = new String[cmp];
+		}
+		return res;
+	}
+
+	public boolean verifie_ligne (String ligne) {
+		int i, ligne_length = ligne.length();
+
+		for (i=0; i<ligne_length; i++) {
+			if (ligne.charAt(i)!='G' 
+				&& ligne.charAt(i)!='B')
+					return false;
+		}
+		return true;
+	}
+
+	public String get_numero_coup (int numero_ligne, String coup0) {
+		String [] coups = coup0.split("-");
+
+		if (coups==null) 
+			throw new GameLoadingException(
+				erreur_fic_incorrect(numero_ligne, coup0));
+		if (coups.length<2)
+			throw new GameLoadingException(
+				erreur_fic_incorrect(numero_ligne, coup0));
+		return coups[0];
+	}
+
+	public String getCoup (int numero_coup, String coup0, boolean coup_1_2) 
+			throws GameLoadingException {
+		String [] coups_tmp = separe_coups(numero_coup, coup0, coup_1_2);
+		return coups_tmp[0]+", "+coups_tmp[1];
+	}
+	
+	public String [] separe_coups (int numero_ligne, String coup0, boolean coup_1_2) 
+			throws GameLoadingException {
+		String [] res = null;
+
+		String [] coups = coup0.split("-");
+		if (coups==null) 
+			throw new GameLoadingException(
+				erreur_fic_incorrect(numero_ligne, coup0));
+		if (coups.length<2)
+			throw new GameLoadingException(
+				erreur_fic_incorrect(numero_ligne, coup0));
+		if (coup_1_2) res = coups[1].split(",");
+		else {
+			if (coups.length==3) res = coups[2].split(",");
+			else return null;
+		}
+
+		if (res==null) 
+			throw new GameLoadingException(
+				erreur_fic_incorrect(numero_ligne, coup0));
+		if (res.length!=2)
+			throw new GameLoadingException(
+				erreur_fic_incorrect(numero_ligne, coup0));
+
+		res[0] = res[0].replace(" ", "");
+		res[1] = res[1].replace(" ", "");
+
+		return res;
+	}
+
+// ######################### Erreurs ########################################### //
+
+	public String erreur_coup_incorrect (int numero_coup, String coups_entier, String mouvement) {
+		return "Erreur : le coup "+get_numero_coup(numero_coup, coups_entier)+"("
+		+mouvement+") est incorrect.";
+	}
+
+	public String erreur_fic_incorrect (int numero_ligne, String ligne) {
+		return "Le fichier de sauvegarde est incorrect a la ligne "
+		+numero_ligne+",\n ("+ligne+")";
+	}
+}
+
+
+# ./src/Sauvegarde.java
+
+import java.io.IOException;
+import java.util.ArrayList;
+
+public class Sauvegarde {
+	/**
+		Sauvegarde les coups du jeu dans le fichier nom_fichier <br>
+		@param nom_fichier, coups
+	**/
+	public String enregistrer (String nom_fichier, ArrayList<String> coups, Jeu jeu) {
+		int i=0, coups_size = coups.size();
+		String res = "";
+		LectureEcriture le = null;
+
+		try {
+			le = new LectureEcriture('w');
+		}
+		catch (IOException e) {
+			//e.printStackTrace();
+			aff("\n"+e.getMessage()+"\n");
+			return "";
+		}
+
+		nom_fichier = le.getNom_du_fichier();
+		res+=jeu.getTypeJeu()+"\n";
+		res+="# Player 1\n";
+		res+=coups.get(0)+"\n\n";
+		res+="# Player 2\n";
+		res+=coups.get(1)+"\n\n";
+		res+="# Move\n";
+
+		for (i=2; i<coups_size-1; i+=2) {
+			res+=coups.get(i);
+			res+=coups.get(i+1)+"\n";
+		}
+		if(i==coups_size-1)
+			res+=coups.get(i);
+		if (!le.ecrire(res, true)) return "";
+		le.fermer();
+		aff("\n"+res+"\n");
+
+		return nom_fichier;
+	}
+
+// ################### Fonctions utilitaires ################################# //
+
+	public void aff (String s1) {
+		System.out.println(s1);
+	}
+
+	public void affnn (String s1) {
+		System.out.print(s1);
+	}
+}
+
+
+# ./src/Tour_de_jeu.java
+
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Scanner;
+
+class Tour_de_jeu extends Plateau {
+	private Plateau plateau;
+
+	public Tour_de_jeu(Plateau plateau) {
+		this.plateau = plateau;
+	}
+
+// ########################## Tour de jeu non graphique ######################################## //
+
+	public void joue_humain (Joueur joueur, Mouvements mouv) {
+		String case_finale = "", case_initiale = "";
+		Case [][] plateau_tmp = plateau.getPlateau();
+		ArrayList<String> tmpAL=null, tmpAL2=null;
+		tmpAL = plateau.getCoordonnes_pions(joueur);
+		boolean ok = false;
+		while (!ok) {
+			try {
+				case_initiale = 
+				plateau.Entre_une_case(tmpAL, false, false);
+			} catch (NullPositionException e){ aff(e.getMessage()); }
+			tmpAL2 = mouv.cases_possibles(
+				case_initiale, joueur.getJoueur1_2());
+			aff("Case de destination : ");
+			try {
+			case_finale  = 
+				plateau.Entre_une_case_aux(tmpAL2, false);
+			} catch (NullPositionException e){ aff(e.getMessage()); }
+			ok = tmpAL2.contains(case_finale);
+		}
+		plateau.deplace_fantome(case_initiale, case_finale);
+	}
+
+	public String [] joue_ordi_aux (Joueur joueur, Mouvements mouv, boolean graphique) {
+		String case_finale = "", case_initiale = "";
+		ArrayList<String> tmpAL=null, tmpAL2=null;
+		tmpAL = plateau.getCoordonnes_pions(joueur);
+		case_initiale = ""; case_finale = "";
+		while (case_initiale.isEmpty() || case_finale.isEmpty()) {
+			case_initiale = plateau.entre_case_ordi(tmpAL);
+			tmpAL2 = mouv.cases_possibles(case_initiale, 
+				joueur.getJoueur1_2());
+			case_finale = plateau.entre_case_ordi(tmpAL2);
+			if (graphique) aff("Case initiale = "+case_initiale);
+			if (graphique) aff("Case finale = "+case_finale);
+		}
+		String [] res = new String[2];
+		res[0] = case_initiale; res[1] = case_finale;
+		return res;
+	}
+
+	public void joue_ordi (Joueur joueur, Mouvements mouv, boolean graphique) {
+		String [] tmp = joue_ordi_aux(joueur, mouv, graphique);
+		if (tmp==null) return;
+		if (tmp.length!=2) return;
+		for (int i=0; i<tmp.length; i++) {
+			if (tmp[i]==null) return;
+			if (tmp[i].isEmpty()) return;
+		}
+		// gestion des erreurs potentielles.
+
+		plateau.deplace_fantome(tmp[0], tmp[1]);
+	}
+
+	public void joue (Joueur joueur, Mouvements mouv) {
+		if (joueur.getJoueur_humain_ordinateur())
+			joue_humain(joueur, mouv);
+		else
+			joue_ordi(joueur, mouv, false);
+	}
+
+// ############################## Tour de jeu graphique ######################################## //
+
+	/**
+		Retourne :<br>
+		0 en cas de correspondance<br>
+		-1 si la case 2 est incorrecte<br>
+		-2 si la case 1 est incorrecte
+	**/
+	public int tour_de_jeu_graphique (Joueur joueur, Mouvements mouv, 
+			String case1, String case2, boolean tour) {
+		ArrayList<String> tmpAL = null, tmpAL2 = null;
+
+		//aff(""+joueur);
+		//aff("tourB = "+tour);
+
+		tmpAL = plateau.getCoordonnes_pions(joueur);
+		if (tmpAL.contains(case1)) {
+			if (tour) return 0;
+		}
+		else return -2;
+		if (!tour) {
+			tmpAL2 = mouv.cases_possibles(case1, 
+				joueur.getJoueur1_2());
+			if (tmpAL2.contains(case2)) return 0;
+			else return -1;
+		}
+		return 0;
+	}
+
+// ################### Fonctions utilitaires ################################# //
+
+	public void aff (String s1) {
+		System.out.println(s1);
+	}
+
+	public void affnn (String s1) {
+		System.out.print(s1);
+	}
+}
+
+
+# ./Liste des fonctionnalitÃ©s implÃ©mentÃ©es.txt
+
+Pour la liste des fonctionnalité implémentées : 
+
+- Jeu non graphique : oui
+- Jeu graphique : oui
+- Mode triche : oui
+- Menu dans le terminal : oui
+- Menu dans la fenêtre : il manque le choix du mode jeu 
+	(on joue forcément en humain contre humain 
+	(mais c'est le seul mode demandé dans le sujet), 
+	avec choix des fantômes automatiques).
+- Relecture à partir d'un fichier : oui
+
+Fonctionnalités supplémentaires : 
+- Plusieurs modes de jeu (dont deux supplémentaires) :
+	# ordinateur contre humain
+	# odinateur contre odinateur.
+- Placement des fanômes automatique (grâce à une option dans la 
+	commande du terminal (cf READ-ME)).
+
+
+# ./Peut-on modifier sans toucher au code.txt
+
+- On peut changer le taille du plateau :
+	Il suffit d'uiliser le constucteur de la classe plateau.
+	Plateau(int longueur, int hauteur);
+
+	Il faudra aussi redéfinir les classes suivantes : 
+		Jeu
+
+- On peut changer la couleur des fantômes :
+	Il suffit d'utiliser la fonction
+	CaseNonGraphique.setCouleur_du_fantome(Color);
+
+	Il faudra aussi redéfinir les classes suivantes : 
+		Ghost
+
+
+
+# ./projet.txt
+
+
+
+# ./READ-ME.txt
+
+Compiler avec la commande :
+cd src
+javac -d "..\class" *.java (sous Windows)
+javac -d "../class" *.java (sous Linux)
+
+Exécuter avec la commande :
+cd src
+java -cp "..\class" Main [options] (sous Windows)
+java -cp "../class" Main [options] (sous Linux)
+
+Options : 
+	-jeu_non_graphique ou -jng :
+		Active le jeu non graphique
+		(le jeu se lance en mode graphique par défaut de cet argument).
+
+	-choix_auto ou -cha :
+		Active le choix des fantômes automatisé (pour les tests).
+
+
+
+# ./Sauvegardes_parties/s1.txt
+
+HCG
+# Player 1
+B G B G
+B B G G
+
+# Player 2
+G G G B
+B B B G
+
+# Move
+1 - b6 , a6 - c2 , c3
+2 - e6 , f6 - d2 , d3
+3 - a6 , b6 - d3 , e3
+4 - b6 , a6
+
+# ./Sauvegardes_parties/s2.txt
+
+CHG
+# Player 1
+B B B G
+G G B G
+
+# Player 2
+G B B G
+B G B G
+
+# Move
+
+
+# ./Sauvegardes_parties/s3.txt
+
+HCT
+# Player 1
+G B G G
+G B B B
+
+# Player 2
+B B B G
+G B G G
+
+# Move
+1 - b6 , a6 - c2 , c3
+2 - a6 , b6 - c3 , b3
+3 - b6 , a6 - c1 , c2
+4 - c6 , b6 - b2 , a2
+
+
+# ./Sauvegardes_parties/sauvegarde.txt
+
+HCT
+# Player 1
+G G B B
+G G B B
+
+# Player 2
+G G B B
+B G G B
+
+# Move
+1 - b6 , a6 - b1 , a1
+2 - c6 , b6 - a1 , b1
+3 - d6 , c6 - e2 , f2
+4 - c6 , d6 - d1 , d2
+5 - e6 , f6 - b2 , a2
+
+
