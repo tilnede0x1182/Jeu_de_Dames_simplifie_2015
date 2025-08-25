@@ -93,5 +93,4 @@ java Jeu
 Projet réalisé dans le cadre d’un exercice d'approfondissement Java orienté objet.
 
 ---
-
-**Remarque** : Le projet ne nécessite aucune dépendance externe. Il peut être compilé et exécuté avec n'importe quelle version standard de Java 17 ou supérieure.
+**Remarque** : Le projet ne nécessite aucune dépendance externe. Il peut être compilé et exécuté avec n'importe quelle version standard de Java 1.8 ou supérieure.
